@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import { Plus_Jakarta_Sans } from "next/font/google"
 import "./globals.css"
+import { ReduxProvider } from "@/lib/ReduxProvider"
 
 const plusJakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -27,7 +28,7 @@ export default function RootLayout({
         />
       </head>
       <body className={`${plusJakarta.variable} font-display bg-background-light dark:bg-background-dark text-[#181111] dark:text-white transition-colors duration-300`}>
-        {children}
+        <ReduxProvider>{children}</ReduxProvider>
       </body>
     </html>
   )

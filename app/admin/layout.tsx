@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { LayoutDashboard, Package, LogOut, Home } from "lucide-react"
@@ -19,13 +19,18 @@ export default function AdminLayout({
   const isAuthenticated = useAppSelector(selectIsAuthenticated)
   const user = useAppSelector(selectCurrentUser)
   const [logout] = useLogoutMutation()
+  const [isClient, setIsClient] = useState(false)
 
   useEffect(() => {
-    // Redirect if not authenticated
-    if (!isAuthenticated) {
+    setIsClient(true)
+  }, [])
+
+  useEffect(() => {
+    // Redirect if not authenticated (only on client)
+    if (isClient && !isAuthenticated) {
       router.push("/login")
     }
-  }, [isAuthenticated, router])
+  }, [isClient, isAuthenticated, router])
 
   const handleLogout = async () => {
     try {
@@ -36,6 +41,18 @@ export default function AdminLayout({
       dispatch(logoutAction())
       router.push("/")
     }
+  }
+
+  // Show loading during hydration
+  if (!isClient) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-400">Loading...</p>
+        </div>
+      </div>
+    )
   }
 
   if (!isAuthenticated) {
@@ -61,7 +78,7 @@ export default function AdminLayout({
                 </svg>
               </div>
               <div>
-                <h2 className="text-xl font-extrabold">Skippi</h2>
+                <h2 className="text-xl font-extrabold">IcePops</h2>
                 <p className="text-xs text-gray-500">Admin Panel</p>
               </div>
             </Link>

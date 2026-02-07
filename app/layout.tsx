@@ -10,8 +10,8 @@ const plusJakarta = Plus_Jakarta_Sans({
 })
 
 export const metadata: Metadata = {
-  title: "Skippi | New Product Launch",
-  description: "Experience the perfect crunch with a velvety center. Skippi's all-new Cream Rolls are here to redefine snacking.",
+  title: "IcePops | New Product Launch",
+  description: "Experience the perfect crunch with a velvety center. IcePops' all-new Cream Rolls are here to redefine snacking.",
 }
 
 export default function RootLayout({

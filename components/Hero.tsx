@@ -27,7 +27,7 @@ export default function Hero() {
                 <span className="text-primary italic">CREAMY</span> DELIGHTS
               </h1>
               <p className="text-chocolate-rich/80 dark:text-background-dark/70 text-lg md:text-xl font-medium max-w-[500px] mx-auto lg:mx-0">
-                Experience the perfect crunch with a velvety center. Skippi&apos;s all-new Cream Rolls are
+                Experience the perfect crunch with a velvety center. IcePops&apos; all-new Cream Rolls are
                 here to redefine snacking.
               </p>
             </div>

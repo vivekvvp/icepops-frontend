@@ -65,7 +65,7 @@ export default function LoginPage() {
                 />
               </svg>
             </div>
-            <h1 className="text-2xl font-extrabold">Skippi</h1>
+            <h1 className="text-2xl font-extrabold">IcePops</h1>
           </Link>
         </div>
 

@@ -44,7 +44,7 @@ export default function Header() {
               />
             </svg>
           </div>
-          <h2 className="text-xl font-extrabold leading-tight tracking-tight">Skippi</h2>
+          <h2 className="text-xl font-extrabold leading-tight tracking-tight">IcePops</h2>
         </Link>
         <nav className="hidden lg:flex items-center gap-9">
           <Link href="/" className="text-sm font-semibold hover:text-primary transition-colors">

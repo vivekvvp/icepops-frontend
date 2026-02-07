@@ -17,7 +17,7 @@ export default function Footer() {
               />
             </svg>
           </div>
-          <span className="text-xl font-black">Skippi</span>
+          <span className="text-xl font-black">IcePops</span>
         </div>
         <div className="flex gap-8 text-sm font-medium opacity-80">
           <a className="hover:text-primary transition-colors" href="#">

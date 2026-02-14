@@ -6,13 +6,11 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
-import { useRegisterMutation } from "@/lib/services/auth.api"
-import { useAppDispatch } from "@/lib/store/hooks"
-import { setCredentials } from "@/lib/store/authSlice"
+import { useRegisterMutation } from "@/lib/services/api"
+import { toast } from "sonner"
 
 export default function RegisterPage() {
   const router = useRouter()
-  const dispatch = useAppDispatch()
   const [register, { isLoading }] = useRegisterMutation()
   const [formData, setFormData] = useState({
     name: "",
@@ -42,11 +40,7 @@ export default function RegisterPage() {
       return false
     }
 
-    if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(formData.password)) {
-      setError("Password must contain uppercase, lowercase, and number")
-      return false
-    }
-
+    // Removed validation for uppercase, lowercase, and number
     return true
   }
 
@@ -68,17 +62,19 @@ export default function RegisterPage() {
 
       const result = await register(dataToSend).unwrap()
       
-      // Update Redux state
-      dispatch(setCredentials({
-        user: result.user,
-        accessToken: result.accessToken,
-      }))
+      // Show success message
+      toast.success(`Welcome to IcePops, ${result.data.user.name}!`)
       
-      // Redirect to home page
-      router.push("/")
+      // Redirect based on user role
+      if (result.data.user.role === 'ADMIN') {
+        router.push("/admin")
+      } else {
+        router.push("/")
+      }
       router.refresh()
     } catch (err: any) {
       setError(err.data?.message || "Registration failed. Please try again.")
+      toast.error(err.data?.message || "Registration failed. Please try again.")
     }
   }
 

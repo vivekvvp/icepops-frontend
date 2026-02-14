@@ -8,7 +8,7 @@ import Footer from "@/components/Footer"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
-import { useGetProductsQuery, useGetCategoriesQuery } from "@/lib/services/product.api"
+import { useGetProductsQuery, useGetAllCategoriesQuery } from "@/lib/services/api"
 
 export default function ProductsPage() {
   const [search, setSearch] = useState("")
@@ -22,7 +22,9 @@ export default function ProductsPage() {
     search: search || undefined,
     category: selectedCategory || undefined,
   })
-  const { data: categories } = useGetCategoriesQuery()
+  const { data: categoriesData } = useGetAllCategoriesQuery(undefined)
+  
+  const categories = categoriesData?.data || []
 
   return (
     <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden">
@@ -68,17 +70,17 @@ export default function ProductsPage() {
                     >
                       All
                     </Button>
-                    {categories.map((category) => (
+                    {categories.map((category: any) => (
                       <Button
-                        key={category}
-                        variant={selectedCategory === category ? "default" : "outline"}
+                        key={category._id}
+                        variant={selectedCategory === category._id ? "default" : "outline"}
                         onClick={() => {
-                          setSelectedCategory(category)
+                          setSelectedCategory(category._id)
                           setPage(1)
                         }}
                         className="whitespace-nowrap"
                       >
-                        {category}
+                        {category.name}
                       </Button>
                     ))}
                   </div>
@@ -100,59 +102,72 @@ export default function ProductsPage() {
                 <div className="text-center py-12">
                   <p className="text-red-600">Error loading products</p>
                 </div>
-              ) : data?.products.length === 0 ? (
+              ) : !data?.data?.products || data.data.products.length === 0 ? (
                 <div className="text-center py-12">
                   <p className="text-gray-600 dark:text-gray-400">No products found</p>
                 </div>
               ) : (
                 <>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                    {data?.products.map((product) => (
-                      <Card
-                        key={product._id}
-                        className="group overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer"
-                      >
-                        <div className="relative h-64 overflow-hidden bg-gray-100 dark:bg-gray-800">
-                          {(product.images[0] || product.productImage) ? (
-                            <img
-                              src={product.images[0] || product.productImage}
-                              alt={product.name}
-                              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                            />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center text-gray-400">
-                              No Image
+                    {data?.data?.products.map((product: any) => {
+                      // Safety check for missing product data
+                      if (!product || !product._id) {
+                        return null;
+                      }
+                      
+                      return (
+                        <Card
+                          key={product._id}
+                          className="group overflow-hidden hover:shadow-xl transition-all duration-300"
+                        >
+                          <Link href={`/products/${product._id}`}>
+                            <div className="relative h-64 overflow-hidden bg-gray-100 dark:bg-gray-800 cursor-pointer">
+                              {(product.images?.[0] || product.productImage) ? (
+                                <img
+                                  src={product.images?.[0] || product.productImage}
+                                  alt={product.name || 'Product'}
+                                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                                />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center text-gray-400">
+                                  No Image
+                                </div>
+                              )}
+                              <div className="absolute top-3 right-3">
+                                <span className="px-3 py-1 text-xs font-semibold rounded-full bg-primary/90 text-white backdrop-blur-sm">
+                                  {product.category?.name || product.category || 'Uncategorized'}
+                                </span>
+                              </div>
                             </div>
-                          )}
-                          <div className="absolute top-3 right-3">
-                            <span className="px-3 py-1 text-xs font-semibold rounded-full bg-primary/90 text-white backdrop-blur-sm">
-                              {product.category}
-                            </span>
-                          </div>
-                        </div>
-                        <div className="p-4">
-                          <h3 className="font-bold text-lg text-gray-900 dark:text-white mb-2 line-clamp-1">
-                            {product.name}
-                          </h3>
-                          <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 line-clamp-2">
-                            {product.description}
-                          </p>
-                          <div className="flex items-center justify-between">
-                            <span className="text-2xl font-bold text-primary">
-                              ${product.price.toFixed(2)}
-                            </span>
-                            <Button size="sm" className="bg-primary hover:bg-primary/90">
-                              <ShoppingCart className="w-4 h-4 mr-2" />
-                              Add
-                            </Button>
+                          </Link>
+                          <div className="p-4">
+                            <Link href={`/products/${product._id}`}>
+                              <h3 className="font-bold text-lg text-gray-900 dark:text-white mb-2 line-clamp-1 hover:text-primary cursor-pointer">
+                                {product.name || 'Product'}
+                              </h3>
+                            </Link>
+                            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 line-clamp-2">
+                              {product.description || ''}
+                            </p>
+                            <div className="flex items-center justify-between">
+                              <span className="text-2xl font-bold text-primary">
+                                ${(product.price || 0).toFixed(2)}
+                              </span>
+                              <Link href={`/products/${product._id}`}>
+                              <Button size="sm" className="bg-primary hover:bg-primary/90">
+                                <ShoppingCart className="w-4 h-4 mr-2" />
+                                View
+                              </Button>
+                            </Link>
                           </div>
                         </div>
                       </Card>
-                    ))}
+                      );
+                    })}
                   </div>
 
                   {/* Pagination */}
-                  {data && data.pagination.totalPages > 1 && (
+                  {data?.data && data.data.pagination.totalPages > 1 && (
                     <div className="mt-12 flex items-center justify-center gap-4">
                       <Button
                         variant="outline"
@@ -162,7 +177,7 @@ export default function ProductsPage() {
                         Previous
                       </Button>
                       <div className="flex items-center gap-2">
-                        {[...Array(Math.min(5, data.pagination.totalPages))].map((_, i) => {
+                        {[...Array(Math.min(5, data.data.pagination.totalPages))].map((_, i) => {
                           const pageNum = i + 1
                           return (
                             <Button
@@ -179,7 +194,7 @@ export default function ProductsPage() {
                       <Button
                         variant="outline"
                         onClick={() => setPage(page + 1)}
-                        disabled={page >= data.pagination.totalPages}
+                        disabled={page >= data.data.pagination.totalPages}
                       >
                         Next
                       </Button>

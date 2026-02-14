@@ -7,7 +7,7 @@ import { ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
-import { useGetProductByIdQuery, useUpdateProductMutation } from "@/lib/services/product.api"
+import { useGetProductByIdQuery, useUpdateProductMutation } from "@/lib/services/api"
 import ImageUploader from "@/components/ImageUploader"
 
 export default function EditProductPage({ params }: { params: { id: string } }) {

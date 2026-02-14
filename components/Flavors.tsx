@@ -4,7 +4,7 @@ import Link from "next/link"
 import { ChevronRight, ShoppingCart } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { useGetLatestProductsQuery } from "@/lib/services/product.api"
+import { useGetLatestProductsQuery } from "@/lib/services/api"
 
 export default function Flavors() {
   const { data: products, isLoading } = useGetLatestProductsQuery(4)
@@ -44,7 +44,7 @@ export default function Flavors() {
         </div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
           {products && products.length > 0 ? (
-            products.map((product) => (
+            products.map((product: any) => (
               <Card
                 key={product._id}
                 className="group overflow-hidden hover:shadow-2xl transition-all duration-300 cursor-pointer"

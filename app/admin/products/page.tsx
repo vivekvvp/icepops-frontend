@@ -7,7 +7,7 @@ import { Plus, Pencil, Trash2, Search } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
-import { useGetProductsQuery, useDeleteProductMutation } from "@/lib/services/product.api"
+import { useGetProductsQuery, useDeleteProductMutation } from "@/lib/services/api"
 
 export default function AdminProductsPage() {
   const router = useRouter()
@@ -94,14 +94,14 @@ export default function AdminProductsPage() {
                     Error loading products
                   </td>
                 </tr>
-              ) : data?.products.length === 0 ? (
+              ) : !Array.isArray(data?.data?.products) || data?.data?.products.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="px-6 py-4 text-center text-gray-500">
                     No products found
                   </td>
                 </tr>
               ) : (
-                data?.products.map((product) => (
+                data?.data?.products.map((product: any) => (
                   <tr key={product._id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-3">
@@ -124,7 +124,7 @@ export default function AdminProductsPage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className="px-2 py-1 text-xs font-semibold rounded-full bg-primary/10 text-primary">
-                        {product.category}
+                        {product.category?.name || product.category}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap font-semibold text-gray-900 dark:text-white">
@@ -161,7 +161,7 @@ export default function AdminProductsPage() {
         </div>
 
         {/* Pagination */}
-        {data && data.pagination.totalPages > 1 && (
+        {data && data.pagination && data.pagination.totalPages > 1 && (
           <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700">
             <div className="flex items-center justify-between">
               <div className="text-sm text-gray-500">

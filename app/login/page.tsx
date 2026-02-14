@@ -6,13 +6,11 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
-import { useLoginMutation } from "@/lib/services/auth.api"
-import { useAppDispatch } from "@/lib/store/hooks"
-import { setCredentials } from "@/lib/store/authSlice"
+import { useLoginMutation } from "@/lib/services/api"
+import { toast } from "sonner"
 
 export default function LoginPage() {
   const router = useRouter()
-  const dispatch = useAppDispatch()
   const [login, { isLoading }] = useLoginMutation()
   const [formData, setFormData] = useState({
     email: "",
@@ -35,17 +33,19 @@ export default function LoginPage() {
     try {
       const result = await login(formData).unwrap()
       
-      // Update Redux state
-      dispatch(setCredentials({
-        user: result.user,
-        accessToken: result.accessToken,
-      }))
+      // Show success message
+      toast.success(`Welcome back, ${result.data.user.name}!`)
       
-      // Redirect to home page
-      router.push("/")
+      // Redirect based on user role
+      if (result.data.user.role === 'ADMIN') {
+        router.push("/admin")
+      } else {
+        router.push("/")
+      }
       router.refresh()
     } catch (err: any) {
       setError(err.data?.message || "Login failed. Please try again.")
+      toast.error(err.data?.message || "Login failed. Please try again.")
     }
   }
 
@@ -141,7 +141,7 @@ export default function LoginPage() {
 
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-600 dark:text-gray-400">
-              Don't have an account?{" "}
+              Don&apos;t have an account?{" "}
               <Link href="/register" className="text-primary hover:underline font-semibold">
                 Sign up
               </Link>

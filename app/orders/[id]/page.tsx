@@ -8,6 +8,7 @@ import { Package, MapPin, CreditCard, CheckCircle, AlertCircle } from 'lucide-re
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useGetOrderByIdQuery, useCancelOrderMutation } from '@/lib/services/api';
+import { formatDateTime } from '@/lib/utils';
 import { UserProtectedRoute } from '@/lib/ProtectedRoute';
 import { toast } from 'sonner';
 
@@ -26,7 +27,7 @@ function OrderDetailPage({ params }: { params: { id: string } }) {
   const { data: orderData, isLoading, error } = useGetOrderByIdQuery(id);
   const [cancelOrder] = useCancelOrderMutation();
 
-  const currentOrder = orderData?.data?.order;
+  const currentOrder = orderData?.data;
 
   useEffect(() => {
     if (error) {
@@ -56,9 +57,9 @@ function OrderDetailPage({ params }: { params: { id: string } }) {
     );
   }
 
-  const currentStepIndex = orderStatusSteps.findIndex(step => step.key === currentOrder.orderStatus);
-  const isCancelled = currentOrder.orderStatus === 'CANCELLED';
-  const canCancel = ['PENDING', 'CONFIRMED'].includes(currentOrder.orderStatus);
+  const currentStepIndex = orderStatusSteps.findIndex(step => step.key === currentOrder.status);
+  const isCancelled = currentOrder.status === 'CANCELLED';
+  const canCancel = ['PENDING', 'CONFIRMED'].includes(currentOrder.status);
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -71,13 +72,7 @@ function OrderDetailPage({ params }: { params: { id: string } }) {
           <div>
             <h1 className="text-3xl font-bold">Order #{currentOrder.orderNumber}</h1>
             <p className="text-gray-600 mt-1">
-              Placed on {new Date(currentOrder.createdAt).toLocaleDateString('en-US', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-              })}
+              Placed on {formatDateTime(currentOrder.createdAt)}
             </p>
           </div>
           
@@ -153,21 +148,31 @@ function OrderDetailPage({ params }: { params: { id: string } }) {
             </h2>
             
             <div className="space-y-4">
-              {currentOrder.items.map((item: any) => (
-                <div key={item.product._id} className="flex gap-4 pb-4 border-b last:border-b-0">
-                  <div className="relative w-20 h-20 flex-shrink-0">
-                    <Image
-                      src={item.product.images[0] || '/placeholder.png'}
-                      alt={item.product.name}
-                      fill
-                      className="object-cover rounded-lg"
-                    />
+              {currentOrder.items.map((item: any, index: number) => (
+                <div key={index} className="flex gap-4 pb-4 border-b last:border-b-0">
+                  <div className="relative w-20 h-20 flex-shrink-0 bg-gray-100 rounded-lg">
+                    {(item.image || item.productId?.images?.[0]) ? (
+                      <Image
+                        src={item.image || item.productId.images[0]}
+                        alt={item.name}
+                        fill
+                        className="object-cover rounded-lg"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <Package className="w-8 h-8 text-gray-400" />
+                      </div>
+                    )}
                   </div>
                   
                   <div className="flex-1">
-                    <Link href={`/products/${item.product.slug}`}>
-                      <h3 className="font-semibold hover:text-primary">{item.product.name}</h3>
-                    </Link>
+                    {item.productId?.slug ? (
+                      <Link href={`/products/${item.productId.slug}`}>
+                        <h3 className="font-semibold hover:text-primary">{item.name}</h3>
+                      </Link>
+                    ) : (
+                      <h3 className="font-semibold">{item.name}</h3>
+                    )}
                     {item.selectedVariant && (
                       <p className="text-sm text-gray-600 mt-1">
                         {item.selectedVariant.size && `Size: ${item.selectedVariant.size}`}
@@ -228,7 +233,7 @@ function OrderDetailPage({ params }: { params: { id: string } }) {
               <div className="flex justify-between text-sm">
                 <span>Shipping</span>
                 <span>
-                  {currentOrder.shippingCharges === 0 ? 'FREE' : `₹${currentOrder.shippingCharges}`}
+                  {currentOrder.shippingCost === 0 ? 'FREE' : `₹${currentOrder.shippingCost}`}
                 </span>
               </div>
               

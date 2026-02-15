@@ -79,7 +79,7 @@ export const api = createApi({
       query: (passwords) => ({ url: '/auth/change-password', method: 'POST', body: passwords }),
     }),
     getProfile: builder.query({
-      query: () => '/auth/profile',
+      query: () => '/users/profile',
       providesTags: ['User'],
     }),
 
@@ -187,11 +187,11 @@ export const api = createApi({
       invalidatesTags: (result, error, id) => [{ type: 'Order', id }, 'Order'],
     }),
     getAllOrders: builder.query({
-      query: (params) => ({ url: '/orders/admin/all', params }),
+      query: (params) => ({ url: '/orders/all', params }),
       providesTags: ['Order'],
     }),
     updateOrderStatus: builder.mutation({
-      query: ({ id, status }) => ({ url: `/orders/admin/${id}/status`, method: 'PATCH', body: { status } }),
+      query: ({ id, status, trackingNumber }) => ({ url: `/orders/${id}/status`, method: 'PATCH', body: { status, trackingNumber } }),
       invalidatesTags: (result, error, { id }) => [{ type: 'Order', id }, 'Order', 'Dashboard'],
     }),
     getOrderStats: builder.query({
@@ -231,60 +231,68 @@ export const api = createApi({
 
     // REVIEW ENDPOINTS
     getProductReviews: builder.query({
-      query: ({ productId, ...params }) => ({ url: `/review/product/${productId}`, params }),
+      query: ({ productId, ...params }) => ({ url: `/reviews/product/${productId}`, params }),
       providesTags: ['Review'],
     }),
     createReview: builder.mutation({
-      query: (review) => ({ url: '/review', method: 'POST', body: review }),
+      query: (review) => ({ url: '/reviews', method: 'POST', body: review }),
       invalidatesTags: ['Review', 'Product'],
     }),
     updateReview: builder.mutation({
-      query: ({ id, ...review }) => ({ url: `/review/${id}`, method: 'PUT', body: review }),
+      query: ({ id, ...review }) => ({ url: `/reviews/${id}`, method: 'PUT', body: review }),
       invalidatesTags: (result, error, { id }) => [{ type: 'Review', id }, 'Review'],
     }),
     deleteReview: builder.mutation({
-      query: (id) => ({ url: `/review/${id}`, method: 'DELETE' }),
+      query: (id) => ({ url: `/reviews/${id}`, method: 'DELETE' }),
       invalidatesTags: ['Review', 'Product'],
     }),
     getUserReviews: builder.query({
-      query: () => '/review/user',
+      query: () => '/reviews/user',
       providesTags: ['Review'],
     }),
     getAllReviews: builder.query({
-      query: (params) => ({ url: '/review/admin/all', params }),
+      query: (params) => ({ url: '/reviews/all', params }),
       providesTags: ['Review'],
     }),
     moderateReview: builder.mutation({
-      query: ({ id, status }) => ({ url: `/review/admin/${id}/moderate`, method: 'PATCH', body: { status } }),
+      query: ({ id, status }) => ({ url: `/reviews/${id}/moderate`, method: 'PATCH', body: { status } }),
       invalidatesTags: (result, error, { id }) => [{ type: 'Review', id }, 'Review', 'Product'],
+    }),
+    deleteReviewAdmin: builder.mutation({
+      query: (id) => ({ url: `/reviews/${id}/admin`, method: 'DELETE' }),
+      invalidatesTags: ['Review', 'Product'],
     }),
 
     // COUPON ENDPOINTS
     getActiveCoupons: builder.query({
-      query: () => '/coupon/active',
+      query: () => '/coupons/active',
       providesTags: ['Coupon'],
     }),
     validateCoupon: builder.mutation({
-      query: ({ code, cartTotal }) => ({ url: '/coupon/validate', method: 'POST', body: { code, cartTotal } }),
+      query: ({ code, cartTotal }) => ({ url: '/coupons/validate', method: 'POST', body: { code, cartTotal } }),
     }),
     getAllCoupons: builder.query({
-      query: (params) => ({ url: '/coupon/admin/all', params }),
+      query: (params) => ({ url: '/coupons', params }),
       providesTags: ['Coupon'],
     }),
+    getCouponById: builder.query({
+      query: (id) => `/coupons/${id}`,
+      providesTags: (result, error, id) => [{ type: 'Coupon', id }],
+    }),
     createCoupon: builder.mutation({
-      query: (coupon) => ({ url: '/coupon/admin', method: 'POST', body: coupon }),
+      query: (coupon) => ({ url: '/coupons', method: 'POST', body: coupon }),
       invalidatesTags: ['Coupon'],
     }),
     updateCoupon: builder.mutation({
-      query: ({ id, ...coupon }) => ({ url: `/coupon/admin/${id}`, method: 'PUT', body: coupon }),
+      query: ({ id, ...coupon }) => ({ url: `/coupons/${id}`, method: 'PUT', body: coupon }),
       invalidatesTags: (result, error, { id }) => [{ type: 'Coupon', id }, 'Coupon'],
     }),
     deleteCoupon: builder.mutation({
-      query: (id) => ({ url: `/coupon/admin/${id}`, method: 'DELETE' }),
+      query: (id) => ({ url: `/coupons/${id}`, method: 'DELETE' }),
       invalidatesTags: ['Coupon'],
     }),
     toggleCouponStatus: builder.mutation({
-      query: (id) => ({ url: `/coupon/admin/${id}/toggle`, method: 'PATCH' }),
+      query: (id) => ({ url: `/coupons/${id}/toggle-status`, method: 'PATCH' }),
       invalidatesTags: (result, error, id) => [{ type: 'Coupon', id }, 'Coupon'],
     }),
 
@@ -409,10 +417,12 @@ export const {
   useGetUserReviewsQuery,
   useGetAllReviewsQuery,
   useModerateReviewMutation,
+  useDeleteReviewAdminMutation,
   // Coupons
   useGetActiveCouponsQuery,
   useValidateCouponMutation,
   useGetAllCouponsQuery,
+  useGetCouponByIdQuery,
   useCreateCouponMutation,
   useUpdateCouponMutation,
   useDeleteCouponMutation,

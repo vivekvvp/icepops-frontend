@@ -1,21 +1,19 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { CheckCircle, XCircle, Star, AlertTriangle } from 'lucide-react';
+import { useEffect } from 'react';
+import { Star, Trash2 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { useGetAllReviewsQuery, useModerateReviewMutation } from '@/lib/services/api';
+import { useGetAllReviewsQuery, useDeleteReviewAdminMutation } from '@/lib/services/api';
 import { toast } from 'sonner';
+import { formatDateTime } from '@/lib/utils';
 
 export default function AdminReviewsPage() {
-  const [statusFilter, setStatusFilter] = useState<string>('PENDING');
-  
   const { data: reviewsData, isLoading, error } = useGetAllReviewsQuery({ 
     page: 1, 
-    limit: 50, 
-    status: statusFilter || undefined 
+    limit: 100
   });
-  const [moderateReview] = useModerateReviewMutation();
+  const [deleteReviewAdmin] = useDeleteReviewAdminMutation();
 
   const reviews = reviewsData?.data?.reviews || [];
 
@@ -25,38 +23,38 @@ export default function AdminReviewsPage() {
     }
   }, [error]);
 
-  const handleModerate = async (reviewId: string, status: 'APPROVED' | 'REJECTED') => {
-    try {
-      await moderateReview({ id: reviewId, status }).unwrap();
-      toast.success(`Review ${status.toLowerCase()} successfully`);
-    } catch (error: any) {
-      toast.error('Failed to moderate review');
+  const handleDelete = async (reviewId: string) => {
+    if (!confirm('Are you sure you want to delete this review? This action cannot be undone.')) {
+      return;
     }
+    
+    try {
+      await deleteReviewAdmin(reviewId).unwrap();
+      toast.success('Review deleted successfully');
+    } catch (error: any) {
+      toast.error('Failed to delete review');
+    }
+  };
+
+  const renderStars = (rating: number) => {
+    return Array.from({ length: 5 }, (_, i) => (
+      <Star
+        key={i}
+        className={`w-4 h-4 ${
+          i < rating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'
+        }`}
+      />
+    ));
   };
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Reviews Moderation</h1>
-          <p className="text-gray-600 mt-1">Review and moderate customer reviews</p>
+          <h1 className="text-3xl font-bold">Customer Reviews</h1>
+          <p className="text-gray-600 mt-1">View and manage all customer reviews</p>
         </div>
       </div>
-
-      {/* Status Filter */}
-      <Card className="p-4">
-        <div className="flex gap-2">
-          {['PENDING', 'APPROVED', 'REJECTED'].map((status) => (
-            <Button
-              key={status}
-              variant={statusFilter === status ? 'default' : 'outline'}
-              onClick={() => setStatusFilter(status)}
-            >
-              {status}
-            </Button>
-          ))}
-        </div>
-      </Card>
 
       {/* Reviews List */}
       {isLoading ? (
@@ -66,8 +64,8 @@ export default function AdminReviewsPage() {
       ) : reviews.length === 0 ? (
         <Card className="p-12 text-center">
           <Star className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-          <h2 className="text-2xl font-bold mb-2">No {statusFilter.toLowerCase()} reviews</h2>
-          <p className="text-gray-600">There are no reviews to moderate at the moment</p>
+          <h2 className="text-2xl font-bold mb-2">No reviews yet</h2>
+          <p className="text-gray-600">Customer reviews will appear here</p>
         </Card>
       ) : (
         <div className="space-y-4">
@@ -76,67 +74,49 @@ export default function AdminReviewsPage() {
               <div className="flex items-start justify-between mb-4">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-2">
-                    <h3 className="font-semibold">{review.product.name}</h3>
+                    <h3 className="font-semibold">
+                      {review.productId?.name || 'Product Deleted'}
+                    </h3>
                     {review.isVerifiedPurchase && (
-                      <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full flex items-center gap-1">
-                        <CheckCircle className="w-3 h-3" />
+                      <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
                         Verified Purchase
                       </span>
                     )}
                   </div>
-                  
-                  <p className="text-sm text-gray-600 mb-2">
-                    By {review.user.name} • {new Date(review.createdAt).toLocaleDateString()}
-                  </p>
-
-                  <div className="flex items-center gap-1 mb-3">
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <Star
-                        key={i}
-                        className={`w-4 h-4 ${
-                          i < review.rating
-                            ? 'text-yellow-500 fill-yellow-500'
-                            : 'text-gray-300'
-                        }`}
-                      />
-                    ))}
+                  <div className="flex items-center gap-3 text-sm text-gray-600">
+                    <span>{review.userId?.name || 'Anonymous'}</span>
+                    <span>•</span>
+                    <span>{formatDateTime(review.createdAt)}</span>
                   </div>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleDelete(review._id)}
+                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              </div>
 
-                  <p className="text-gray-700">{review.comment}</p>
+              <div className="mb-3">
+                <div className="flex items-center gap-1">
+                  {renderStars(review.rating)}
                 </div>
               </div>
 
-              {review.status === 'PENDING' && (
-                <div className="flex gap-2 border-t pt-4">
-                  <Button
-                    className="flex-1 gap-2"
-                    onClick={() => handleModerate(review._id, 'APPROVED')}
-                  >
-                    <CheckCircle className="w-4 h-4" />
-                    Approve
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    className="flex-1 gap-2"
-                    onClick={() => handleModerate(review._id, 'REJECTED')}
-                  >
-                    <XCircle className="w-4 h-4" />
-                    Reject
-                  </Button>
-                </div>
-              )}
+              <p className="text-gray-700 mb-4">{review.comment}</p>
 
-              {review.status === 'APPROVED' && (
-                <div className="flex items-center gap-2 text-green-600 text-sm border-t pt-4">
-                  <CheckCircle className="w-4 h-4" />
-                  <span>This review is published on the product page</span>
-                </div>
-              )}
-
-              {review.status === 'REJECTED' && (
-                <div className="flex items-center gap-2 text-red-600 text-sm border-t pt-4">
-                  <XCircle className="w-4 h-4" />
-                  <span>This review has been rejected</span>
+              {review.images && review.images.length > 0 && (
+                <div className="flex gap-2">
+                  {review.images.map((image: string, idx: number) => (
+                    <img
+                      key={idx}
+                      src={image}
+                      alt={`Review ${idx + 1}`}
+                      className="w-20 h-20 object-cover rounded"
+                    />
+                  ))}
                 </div>
               )}
             </Card>

@@ -6,6 +6,7 @@ import { Search, Filter, ChevronRight } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { formatDateTime } from '@/lib/utils';
 import {
   Select,
   SelectContent,
@@ -34,7 +35,7 @@ export default function AdminOrdersPage() {
   const { data: ordersData, isLoading, error } = useGetAllOrdersQuery({ 
     page, 
     limit: 20, 
-    status: statusFilter || undefined 
+    status: statusFilter && statusFilter !== 'ALL' ? statusFilter : undefined 
   });
 
   const orders = ordersData?.data?.orders || [];
@@ -48,8 +49,8 @@ export default function AdminOrdersPage() {
 
   const filteredOrders = orders.filter((order: any) =>
     order.orderNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    order.user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    order.user.email.toLowerCase().includes(searchQuery.toLowerCase())
+    order.userId?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    order.userId?.email?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
@@ -113,21 +114,15 @@ export default function AdminOrdersPage() {
                     Order #{order.orderNumber}
                   </h3>
                   <p className="text-sm text-gray-600">
-                    Customer: {order.user.name} ({order.user.email})
+                    Customer: {order.userId?.name} ({order.userId?.email})
                   </p>
                   <p className="text-sm text-gray-600">
-                    Placed on {new Date(order.createdAt).toLocaleDateString('en-US', {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
+                    Placed on {formatDateTime(order.createdAt)}
                   </p>
                 </div>
                 
-                <span className={`px-3 py-1 rounded-full text-xs font-medium ${orderStatusColors[order.orderStatus]}`}>
-                  {order.orderStatus.replace('_', ' ')}
+                <span className={`px-3 py-1 rounded-full text-xs font-medium ${orderStatusColors[order.status]}`}>
+                  {order.status.replace(/_/g, ' ')}
                 </span>
               </div>
 

@@ -2,9 +2,18 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Package, ChevronRight } from 'lucide-react';
+import { Package, ChevronRight, Home } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { formatDate } from '@/lib/utils';
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb';
 import { useGetUserOrdersQuery } from '@/lib/services/api';
 import { UserProtectedRoute } from '@/lib/ProtectedRoute';
 import { toast } from 'sonner';
@@ -67,6 +76,23 @@ function OrdersPage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
+      {/* Breadcrumb */}
+      <Breadcrumb className="mb-6">
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link href="/">
+                <Home className="h-4 w-4" />
+              </Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>My Orders</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
       <h1 className="text-3xl font-bold mb-8">My Orders</h1>
 
       <div className="space-y-4">
@@ -82,18 +108,14 @@ function OrdersPage() {
                 <div>
                   <h3 className="text-lg font-semibold mb-1">Order #{order.orderNumber || 'N/A'}</h3>
                   <p className="text-sm text-gray-600">
-                    Placed on {order.createdAt ? new Date(order.createdAt).toLocaleDateString('en-US', {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric',
-                    }) : 'N/A'}
+                    Placed on {order.createdAt ? formatDate(order.createdAt) : 'N/A'}
                   </p>
                 </div>
                 
                 <div className="text-right">
                   <div className="flex gap-2">
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${orderStatusColors[order.orderStatus] || 'bg-gray-100 text-gray-800'}`}>
-                      {(order.orderStatus || 'PENDING').replace('_', ' ')}
+                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${orderStatusColors[order.status] || 'bg-gray-100 text-gray-800'}`}>
+                      {(order.status || 'PENDING').replace(/_/g, ' ')}
                     </span>
                     <span className={`px-3 py-1 rounded-full text-xs font-medium ${paymentStatusColors[order.paymentStatus] || 'bg-gray-100 text-gray-800'}`}>
                       {order.paymentStatus || 'PENDING'}

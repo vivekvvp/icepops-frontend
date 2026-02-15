@@ -55,7 +55,7 @@ export default function AdminDashboard() {
                 Total Revenue
               </p>
               <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2">
-                {isLoading ? "..." : `₹${stats?.totalRevenue.toLocaleString() || 0}`}
+                {isLoading ? "..." : `₹${stats?.totalRevenue?.toFixed(2) || '0.00'}`}
               </p>
             </div>
             <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-full">
@@ -191,7 +191,7 @@ export default function AdminDashboard() {
                     </p>
                   </div>
                   <p className="font-bold text-primary">
-                    ₹{item.totalRevenue.toLocaleString()}
+                    ₹{item.totalRevenue.toFixed(2)}
                   </p>
                 </div>
               ))}

@@ -21,7 +21,7 @@ function ProfilePage() {
     confirmPassword: '',
   });
 
-  const user = profileData?.data?.user;
+  const user = profileData?.data;
 
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();

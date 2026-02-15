@@ -1,10 +1,12 @@
 'use client';
 
 import { useEffect } from 'react';
+import Link from 'next/link';
 import { Plus, Edit, Trash2, Tag, Power } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useGetAllCouponsQuery, useToggleCouponStatusMutation, useDeleteCouponMutation } from '@/lib/services/api';
+import { formatShortDate } from '@/lib/utils';
 import { toast } from 'sonner';
 
 export default function AdminCouponsPage() {
@@ -12,7 +14,7 @@ export default function AdminCouponsPage() {
   const [toggleCouponStatus] = useToggleCouponStatusMutation();
   const [deleteCoupon] = useDeleteCouponMutation();
 
-  const coupons = couponsData?.data?.coupons || [];
+  const coupons = couponsData?.data || [];
 
   useEffect(() => {
     if (error) {
@@ -51,10 +53,12 @@ export default function AdminCouponsPage() {
           <h1 className="text-3xl font-bold">Coupons & Discounts</h1>
           <p className="text-gray-600 mt-1">Manage discount coupons and promotions</p>
         </div>
-        <Button className="gap-2">
-          <Plus className="w-4 h-4" />
-          Create Coupon
-        </Button>
+        <Link href="/admin/coupons/create">
+          <Button className="gap-2">
+            <Plus className="w-4 h-4" />
+            Create Coupon
+          </Button>
+        </Link>
       </div>
 
       {isLoading ? (
@@ -66,10 +70,12 @@ export default function AdminCouponsPage() {
           <Tag className="w-16 h-16 mx-auto mb-4 text-gray-400" />
           <h2 className="text-2xl font-bold mb-2">No coupons yet</h2>
           <p className="text-gray-600 mb-6">Create your first coupon to offer discounts</p>
-          <Button className="gap-2">
-            <Plus className="w-4 h-4" />
-            Create Coupon
-          </Button>
+          <Link href="/admin/coupons/create">
+            <Button className="gap-2">
+              <Plus className="w-4 h-4" />
+              Create Coupon
+            </Button>
+          </Link>
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -104,9 +110,9 @@ export default function AdminCouponsPage() {
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Discount:</span>
                     <span className="font-semibold">
-                      {coupon.discountType === 'PERCENTAGE' 
-                        ? `${coupon.discountValue}%` 
-                        : `₹${coupon.discountValue}`}
+                      {coupon.type === 'PERCENTAGE' 
+                        ? `${coupon.value}%` 
+                        : `₹${coupon.value}`}
                       {coupon.maxDiscount && ` (max ₹${coupon.maxDiscount})`}
                     </span>
                   </div>
@@ -121,7 +127,7 @@ export default function AdminCouponsPage() {
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Valid Until:</span>
                     <span className="font-semibold">
-                      {new Date(coupon.expiryDate).toLocaleDateString()}
+                      {formatShortDate(coupon.expiryDate)}
                     </span>
                   </div>
 
@@ -153,9 +159,11 @@ export default function AdminCouponsPage() {
                     <Power className="w-4 h-4" />
                     {coupon.isActive ? 'Deactivate' : 'Activate'}
                   </Button>
-                  <Button variant="outline" size="sm">
-                    <Edit className="w-4 h-4" />
-                  </Button>
+                  <Link href={`/admin/coupons/${coupon._id}`}>
+                    <Button variant="outline" size="sm">
+                      <Edit className="w-4 h-4" />
+                    </Button>
+                  </Link>
                   <Button 
                     variant="destructive" 
                     size="sm"

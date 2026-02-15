@@ -11,9 +11,12 @@ interface ProtectedRouteProps {
 
 export function ProtectedRoute({ children, requireAdmin = false }: ProtectedRouteProps) {
   const router = useRouter();
-  const { user, isAuthenticated, isLoading } = useAppSelector((state) => state.auth);
+  const { user, isAuthenticated, isLoading, _isRehydrated } = useAppSelector((state) => state.auth);
 
   useEffect(() => {
+    // Wait for redux-persist to rehydrate state before checking authentication
+    if (!_isRehydrated) return;
+    
     // Wait for auth state to be determined
     if (isLoading) return;
 
@@ -28,10 +31,10 @@ export function ProtectedRoute({ children, requireAdmin = false }: ProtectedRout
       router.push('/');
       return;
     }
-  }, [isAuthenticated, user, isLoading, requireAdmin, router]);
+  }, [isAuthenticated, user, isLoading, _isRehydrated, requireAdmin, router]);
 
-  // Show loading state while checking authentication
-  if (isLoading) {
+  // Show loading state while rehydrating or checking authentication
+  if (!_isRehydrated || isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>

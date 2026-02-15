@@ -2,11 +2,21 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { MapPin, Plus, CreditCard, Package, CheckCircle } from 'lucide-react';
+import Link from 'next/link';
+import Image from 'next/image';
+import { MapPin, Plus, CreditCard, Package, CheckCircle, Home, ShoppingCart, Tag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb';
 import {
   useGetCartQuery,
   useGetAllAddressesQuery,
@@ -17,7 +27,7 @@ import { UserProtectedRoute } from '@/lib/ProtectedRoute';
 import { toast } from 'sonner';
 
 const paymentMethods = [
-  { id: 'COD', name: 'Cash on Delivery', icon: Package },
+  { id: 'CASH_ON_DELIVERY', name: 'Cash on Delivery', icon: Package },
   { id: 'CARD', name: 'Credit/Debit Card', icon: CreditCard },
 ];
 
@@ -29,7 +39,7 @@ function CheckoutPage() {
   const [createOrder, { isLoading: isCreatingOrder }] = useCreateOrderMutation();
 
   const [selectedAddress, setSelectedAddress] = useState('');
-  const [selectedPayment, setSelectedPayment] = useState('COD');
+  const [selectedPayment, setSelectedPayment] = useState('CASH_ON_DELIVERY');
   const [showAddressForm, setShowAddressForm] = useState(false);
   const [orderPlaced, setOrderPlaced] = useState(false);
   const [orderId, setOrderId] = useState('');
@@ -90,8 +100,8 @@ function CheckoutPage() {
 
     try {
       const orderData = {
-        shippingAddress: selectedAddress,
-        paymentMethod: selectedPayment as 'COD' | 'CARD' | 'UPI' | 'WALLET',
+        shippingAddressId: selectedAddress,
+        paymentMethod: selectedPayment as 'CASH_ON_DELIVERY' | 'CARD' | 'UPI' | 'NET_BANKING',
       };
 
       const result = await createOrder(orderData).unwrap();
@@ -149,6 +159,32 @@ function CheckoutPage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
+      {/* Breadcrumb */}
+      <Breadcrumb className="mb-6">
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link href="/">
+                <Home className="h-4 w-4" />
+              </Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link href="/cart" className="flex items-center gap-1">
+                <ShoppingCart className="h-4 w-4" />
+                Cart
+              </Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>Checkout</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
       <h1 className="text-3xl font-bold mb-8">Checkout</h1>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -338,25 +374,37 @@ function CheckoutPage() {
             <h2 className="text-xl font-bold mb-4">Order Items ({cart.items.length})</h2>
             <div className="space-y-3">
               {cart.items.map((item: any) => {
-                // Safety check for missing product
-                if (!item.product || !item.product._id) {
+                // Safety check for missing product - cart stores productId
+                const product = item.productId || item.product;
+                if (!product || !product._id) {
                   return null;
                 }
                 
+                const itemTotal = (item.price || product.price || 0) * item.quantity;
+                
                 return (
-                  <div key={item.product._id} className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg">
-                    <img
-                      src={item.product.images?.[0] || '/placeholder.png'}
-                      alt={item.product.name || 'Product'}
-                      className="w-16 h-16 object-cover rounded"
-                    />
-                    <div className="flex-1">
-                      <h3 className="font-semibold">{item.product.name || 'Product'}</h3>
+                  <div key={product._id} className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                    <div className="relative w-20 h-20 flex-shrink-0 rounded overflow-hidden border border-gray-200">
+                      <Image
+                        src={item.image || product.images?.[0] || '/placeholder.png'}
+                        alt={item.name || product.name || 'Product'}
+                        fill
+                        className="object-cover"
+                      />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold line-clamp-2">{item.name || product.name || 'Product'}</h3>
                       <p className="text-sm text-gray-600">Quantity: {item.quantity}</p>
+                      {item.variant && (
+                        <p className="text-xs text-gray-500">
+                          {item.variant.size && `Size: ${item.variant.size}`}
+                          {item.variant.color && ` | Color: ${item.variant.color}`}
+                        </p>
+                      )}
                     </div>
                     <div className="text-right">
-                      <p className="font-bold">${((item.price || 0) * item.quantity).toFixed(2)}</p>
-                      <p className="text-sm text-gray-600">${item.price || 0} each</p>
+                      <p className="font-bold text-primary">₹{itemTotal.toFixed(2)}</p>
+                      <p className="text-xs text-gray-600">₹{(item.price || product.price || 0).toFixed(2)} each</p>
                     </div>
                   </div>
                 );
@@ -368,39 +416,51 @@ function CheckoutPage() {
         {/* Order Summary */}
         <div className="lg:col-span-1">
           <Card className="p-6 sticky top-4">
-            <h2 className="text-xl font-bold mb-4">Order Summary</h2>
+            <h2 className="text-xl font-bold mb-6">Order Summary</h2>
 
             <div className="space-y-3 mb-6">
-              <div className="flex justify-between text-gray-600">
-                <span>Subtotal</span>
-                <span>${cart.subtotal?.toFixed(2)}</span>
+              <div className="flex justify-between text-gray-700">
+                <span>Subtotal ({cart.items.length} {cart.items.length === 1 ? 'item' : 'items'})</span>
+                <span className="font-medium">₹{cart.subtotal?.toFixed(2)}</span>
               </div>
               {cart.discount > 0 && (
                 <div className="flex justify-between text-green-600">
-                  <span>Discount</span>
-                  <span>-${cart.discount.toFixed(2)}</span>
+                  <span className="font-medium">Discount</span>
+                  <span className="font-medium">-₹{cart.discount.toFixed(2)}</span>
                 </div>
               )}
               {cart.couponCode && (
-                <div className="flex justify-between text-sm text-gray-600">
-                  <span>Coupon Applied</span>
-                  <span className="font-semibold">{cart.couponCode}</span>
+                <div className="mt-2 flex items-center gap-2 text-green-600 text-sm bg-green-50 p-2 rounded">
+                  <Tag className="w-4 h-4" />
+                  <span className="font-medium">Coupon &quot;{cart.couponCode}&quot; applied</span>
                 </div>
               )}
-              <div className="flex justify-between text-gray-600">
+              <div className="flex justify-between text-gray-700">
                 <span>Shipping</span>
-                <span className="text-green-600">FREE</span>
+                <span className="font-medium text-green-600">
+                  {cart.subtotal > 500 ? 'FREE' : '₹50.00'}
+                </span>
               </div>
-              <div className="border-t pt-3">
-                <div className="flex justify-between text-xl font-bold">
-                  <span>Total</span>
-                  <span className="text-primary">${cart.total?.toFixed(2)}</span>
+              {cart.subtotal <= 500 && (
+                <div className="text-xs text-gray-600 bg-blue-50 p-2 rounded">
+                  Add items worth ₹{(500 - cart.subtotal).toFixed(2)} more to get FREE shipping!
+                </div>
+              )}
+              <div className="border-t pt-4 mt-4">
+                <div className="flex justify-between items-center">
+                  <span className="text-lg font-bold">Total</span>
+                  <div className="text-right">
+                    <span className="text-2xl font-bold text-primary">₹{cart.total?.toFixed(2)}</span>
+                    {cart.discount > 0 && (
+                      <p className="text-xs text-gray-500">You saved ₹{cart.discount.toFixed(2)}</p>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
 
             <Button
-              className="w-full"
+              className="w-full mb-4"
               size="lg"
               onClick={handlePlaceOrder}
               disabled={!selectedAddress || isCreatingOrder}
@@ -408,9 +468,23 @@ function CheckoutPage() {
               {isCreatingOrder ? 'Placing Order...' : 'Place Order'}
             </Button>
 
-            <p className="text-xs text-gray-500 text-center mt-4">
-              By placing your order, you agree to our Terms of Service and Privacy Policy
-            </p>
+            <div className="text-xs text-gray-600 space-y-2 pt-4 border-t">
+              <div className="flex items-center gap-2">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+                <span>Secure checkout</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+                <span>Easy returns within 7 days</span>
+              </div>
+              <p className="text-center mt-4">
+                By placing your order, you agree to our Terms of Service and Privacy Policy
+              </p>
+            </div>
           </Card>
         </div>
       </div>

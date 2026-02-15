@@ -22,6 +22,7 @@ import {
   useCreateReviewMutation,
 } from '@/lib/services/api';
 import { toast } from 'sonner';
+import { formatDateTime } from '@/lib/utils';
 
 export default function ProductDetailPage() {
   const router = useRouter();
@@ -99,6 +100,10 @@ export default function ProductDetailPage() {
     }
     if (!reviewText.trim()) {
       toast.error('Please write a review');
+      return;
+    }
+    if (reviewText.trim().length < 10) {
+      toast.error('Review must be at least 10 characters long');
       return;
     }
 
@@ -351,11 +356,15 @@ export default function ProductDetailPage() {
                   <div>
                     <label className="block text-sm font-medium mb-2">Your Review</label>
                     <Textarea
-                      placeholder="Share your experience with this product..."
+                      placeholder="Share your experience with this product... (minimum 10 characters)"
                       value={reviewText}
                       onChange={(e) => setReviewText(e.target.value)}
                       rows={4}
+                      className={reviewText.trim().length > 0 && reviewText.trim().length < 10 ? 'border-red-300' : ''}
                     />
+                    <p className={`text-sm mt-1 ${reviewText.trim().length < 10 ? 'text-red-500' : 'text-gray-500'}`}>
+                      {reviewText.trim().length}/10 characters minimum
+                    </p>
                   </div>
                   <Button onClick={handleSubmitReview} disabled={isCreatingReview}>
                     {isCreatingReview ? 'Submitting...' : 'Submit Review'}
@@ -370,11 +379,11 @@ export default function ProductDetailPage() {
                     <Card key={review._id} className="p-6">
                       <div className="flex items-start justify-between mb-3">
                         <div>
-                          <p className="font-semibold">{review.user?.name || 'Anonymous'}</p>
+                          <p className="font-semibold">{review.userId?.name || 'Anonymous'}</p>
                           <div className="flex items-center gap-2 mt-1">
                             <div className="flex">{renderStars(review.rating)}</div>
                             <span className="text-sm text-gray-500">
-                              {new Date(review.createdAt).toLocaleDateString()}
+                              {formatDateTime(review.createdAt)}
                             </span>
                           </div>
                         </div>

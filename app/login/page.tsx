@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
@@ -11,6 +11,8 @@ import { toast } from "sonner"
 
 export default function LoginPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const redirectUrl = searchParams.get('redirect')
   const [login, { isLoading }] = useLoginMutation()
   const [formData, setFormData] = useState({
     email: "",
@@ -36,8 +38,10 @@ export default function LoginPage() {
       // Show success message
       toast.success(`Welcome back, ${result.data.user.name}!`)
       
-      // Redirect based on user role
-      if (result.data.user.role === 'ADMIN') {
+      // Redirect to the original page or based on user role
+      if (redirectUrl) {
+        router.push(redirectUrl)
+      } else if (result.data.user.role === 'ADMIN') {
         router.push("/admin")
       } else {
         router.push("/")

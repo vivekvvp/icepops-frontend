@@ -1,6 +1,7 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import type { RootState } from './store';
 import { api } from '../services/api';
+import { REHYDRATE } from 'redux-persist';
 
 export interface User {
   _id: string;
@@ -18,6 +19,7 @@ interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
+  _isRehydrated: boolean;
 }
 
 const initialState: AuthState = {
@@ -27,6 +29,7 @@ const initialState: AuthState = {
   isAuthenticated: false,
   isLoading: false,
   error: null,
+  _isRehydrated: false,
 };
 
 const authSlice = createSlice({
@@ -66,6 +69,21 @@ const authSlice = createSlice({
     },
   },
   extraReducers: (builder) => {
+    // Handle redux-persist rehydration
+    builder.addCase(REHYDRATE, (state, action: any) => {
+      if (action.payload?.auth) {
+        return {
+          ...state,
+          ...action.payload.auth,
+          _isRehydrated: true,
+        };
+      }
+      return {
+        ...state,
+        _isRehydrated: true,
+      };
+    });
+
     // Listen to RTK Query mutations for auth
     builder
       .addMatcher(api.endpoints.login.matchFulfilled, (state, action) => {

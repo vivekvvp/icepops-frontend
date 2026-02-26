@@ -194,17 +194,6 @@ export default function AdminCategoriesPage() {
                 />
               </div>
 
-              <div>
-                <Label htmlFor="image">Image URL (optional)</Label>
-                <Input
-                  id="image"
-                  type="url"
-                  value={formData.image}
-                  onChange={(e) => setFormData({ ...formData, image: e.target.value })}
-                  placeholder="https://example.com/image.jpg"
-                />
-              </div>
-
               <div className="flex gap-3 pt-4">
                 <Button
                   type="button"

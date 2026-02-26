@@ -12,12 +12,14 @@ import ImageUploader from "@/components/ImageUploader"
 
 export default function EditProductPage({ params }: { params: { id: string } }) {
   const router = useRouter()
-  const { data: product, isLoading: isLoadingProduct } = useGetProductByIdQuery(params.id)
+  const { data: productResponse, isLoading: isLoadingProduct } = useGetProductByIdQuery(params.id)
+  const product = (productResponse as any)?.data
   const [updateProduct, { isLoading: isUpdating }] = useUpdateProductMutation()
   const [formData, setFormData] = useState({
     name: "",
     description: "",
     price: "",
+    stock: "",
     category: "",
     images: [] as string[],
   })
@@ -27,10 +29,11 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
   useEffect(() => {
     if (product) {
       setFormData({
-        name: product.name,
-        description: product.description,
-        price: product.price.toString(),
-        category: product.category,
+        name: product.name || "",
+        description: product.description || "",
+        price: product.price != null ? product.price.toString() : "",
+        stock: product.stock != null ? product.stock.toString() : "",
+        category: typeof product.category === 'object' ? product.category?._id : product.category || "",
         images: product.images || [],
       })
     }
@@ -70,6 +73,12 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
       return
     }
 
+    const stock = parseInt(formData.stock)
+    if (isNaN(stock) || stock < 0) {
+      setError("Please enter a valid stock quantity")
+      return
+    }
+
     try {
       await updateProduct({
         id: params.id,
@@ -77,6 +86,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
           name: formData.name,
           description: formData.description,
           price,
+          stock,
           category: formData.category,
           images: formData.images.filter(img => img.startsWith('http')), // Keep only uploaded URLs
           imageFiles, // New images to upload
@@ -163,23 +173,44 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
             </div>
           </div>
 
-          <div>
-            <label htmlFor="price" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Price ($) *
-            </label>
-            <Input
-              id="price"
-              name="price"
-              type="number"
-              step="0.01"
-              min="0.01"
-              value={formData.price}
-              onChange={handleChange}
-              placeholder="0.00"
-              required
-              disabled={isUpdating}
-            />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label htmlFor="price" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Price ($) *
+              </label>
+              <Input
+                id="price"
+                name="price"
+                type="number"
+                step="0.01"
+                min="0.01"
+                value={formData.price}
+                onChange={handleChange}
+                placeholder="0.00"
+                required
+                disabled={isUpdating}
+              />
+            </div>
+
+            <div>
+              <label htmlFor="stock" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Stock *
+              </label>
+              <Input
+                id="stock"
+                name="stock"
+                type="number"
+                min="0"
+                value={formData.stock}
+                onChange={handleChange}
+                placeholder="0"
+                required
+                disabled={isUpdating}
+              />
+            </div>
           </div>
+
+
 
           <div>
             <label htmlFor="description" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">

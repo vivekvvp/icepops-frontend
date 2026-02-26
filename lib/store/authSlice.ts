@@ -102,6 +102,14 @@ const authSlice = createSlice({
           state.error = null;
         }
       })
+      .addMatcher(api.endpoints.googleAuth.matchFulfilled, (state, action) => {
+        if (action.payload.data) {
+          state.user = action.payload.data.user;
+          state.accessToken = action.payload.data.accessToken;
+          state.isAuthenticated = true;
+          state.error = null;
+        }
+      })
       .addMatcher(api.endpoints.logout.matchFulfilled, (state) => {
         state.user = null;
         state.accessToken = null;

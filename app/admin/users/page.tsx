@@ -148,7 +148,7 @@ export default function AdminUsersPage() {
                         <Button
                           variant={user.isBlocked ? 'outline' : 'destructive'}
                           size="sm"
-                          onClick={() => handleToggleBlock(user._id)}
+                          onClick={() => handleToggleBlock(user.id)}
                           className="gap-2"
                         >
                           {user.isBlocked ? (

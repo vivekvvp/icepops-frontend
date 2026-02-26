@@ -24,6 +24,8 @@ import {
   useCreateOrderMutation,
 } from '@/lib/services/api';
 import { UserProtectedRoute } from '@/lib/ProtectedRoute';
+import { useAppSelector } from '@/lib/store/hooks';
+import { selectIsAuthenticated } from '@/lib/store/authSlice';
 import { toast } from 'sonner';
 
 const paymentMethods = [
@@ -33,8 +35,9 @@ const paymentMethods = [
 
 function CheckoutPage() {
   const router = useRouter();
-  const { data: cartData, isLoading: cartLoading } = useGetCartQuery(undefined);
-  const { data: addressesData, isLoading: addressLoading } = useGetAllAddressesQuery(undefined);
+  const isAuthenticated = useAppSelector(selectIsAuthenticated);
+  const { data: cartData, isLoading: cartLoading } = useGetCartQuery(undefined, { skip: !isAuthenticated });
+  const { data: addressesData, isLoading: addressLoading } = useGetAllAddressesQuery(undefined, { skip: !isAuthenticated });
   const [createAddress] = useCreateAddressMutation();
   const [createOrder, { isLoading: isCreatingOrder }] = useCreateOrderMutation();
 

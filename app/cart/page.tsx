@@ -25,11 +25,14 @@ import {
   useValidateCouponMutation
 } from '@/lib/services/api';
 import { UserProtectedRoute } from '@/lib/ProtectedRoute';
+import { useAppSelector } from '@/lib/store/hooks';
+import { selectIsAuthenticated } from '@/lib/store/authSlice';
 import { toast } from 'sonner';
 
 function CartPage() {
   const router = useRouter();
-  const { data: cartData, isLoading } = useGetCartQuery(undefined);
+  const isAuthenticated = useAppSelector(selectIsAuthenticated);
+  const { data: cartData, isLoading } = useGetCartQuery(undefined, { skip: !isAuthenticated });
   const [updateCartItem] = useUpdateCartItemMutation();
   const [removeFromCart] = useRemoveFromCartMutation();
   const [applyCoupon] = useApplyCouponMutation();

@@ -71,6 +71,9 @@ export default function AdminProductsPage() {
                   Category
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Stock
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Price
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
@@ -84,19 +87,19 @@ export default function AdminProductsPage() {
             <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
               {isLoading ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-4 text-center text-gray-500">
+                  <td colSpan={6} className="px-6 py-4 text-center text-gray-500">
                     Loading products...
                   </td>
                 </tr>
               ) : error ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-4 text-center text-red-500">
+                  <td colSpan={6} className="px-6 py-4 text-center text-red-500">
                     Error loading products
                   </td>
                 </tr>
               ) : !Array.isArray(data?.data?.products) || data?.data?.products.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-4 text-center text-gray-500">
+                  <td colSpan={6} className="px-6 py-4 text-center text-gray-500">
                     No products found
                   </td>
                 </tr>
@@ -127,8 +130,21 @@ export default function AdminProductsPage() {
                         {product.category?.name || product.category}
                       </span>
                     </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span
+                        className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold ${
+                          product.stock === 0
+                            ? 'bg-red-100 text-red-700'
+                            : product.stock <= 10
+                            ? 'bg-yellow-100 text-yellow-700'
+                            : 'bg-green-100 text-green-700'
+                        }`}
+                      >
+                        {product.stock ?? '–'}
+                      </span>
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap font-semibold text-gray-900 dark:text-white">
-                      ${product.price.toFixed(2)}
+                      ${(product.price ?? 0).toFixed(2)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {new Date(product.createdAt).toLocaleDateString()}

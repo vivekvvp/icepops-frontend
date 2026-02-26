@@ -14,7 +14,7 @@ export default function AdminInventoryPage() {
   
   const { data: productsData, isLoading, error } = useGetLowStockProductsQuery(threshold);
 
-  const products = productsData?.data?.products || [];
+  const products = productsData?.data || [];
 
   useEffect(() => {
     if (error) {

@@ -7,7 +7,8 @@ import { Card } from "@/components/ui/card"
 import { useGetLatestProductsQuery } from "@/lib/services/api"
 
 export default function Flavors() {
-  const { data: products, isLoading } = useGetLatestProductsQuery(4)
+  const { data: productsResponse, isLoading } = useGetLatestProductsQuery(undefined)
+  const products: any[] = productsResponse?.data || []
 
   if (isLoading) {
     return (
@@ -63,7 +64,7 @@ export default function Flavors() {
                   )}
                   <div className="absolute top-3 right-3">
                     <span className="px-2 py-1 text-xs font-semibold rounded-full bg-primary/90 text-white backdrop-blur-sm">
-                      {product.category}
+                      {typeof product.category === 'object' ? product.category?.name : product.category}
                     </span>
                   </div>
                 </div>
@@ -76,7 +77,7 @@ export default function Flavors() {
                   </p>
                   <div className="flex items-center justify-between">
                     <span className="text-xl font-bold text-primary">
-                      ${product.price.toFixed(2)}
+                    ₹{(product.price ?? 0).toFixed(2)}
                     </span>
                     <Button size="sm" className="bg-primary hover:bg-primary/90">
                       <ShoppingCart className="w-3 h-3" />

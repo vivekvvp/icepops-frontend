@@ -1,7 +1,7 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 import type { BaseQueryFn, FetchArgs, FetchBaseQueryError } from '@reduxjs/toolkit/query';
 import type { RootState } from '../store/store';
-import { updateAccessToken, logout } from '../store/authSlice';
+import { logout } from '../store/authSlice';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
@@ -19,31 +19,13 @@ const baseQuery = fetchBaseQuery({
 });
 
 const baseQueryWithReauth: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQueryError> = async (args, api, extraOptions) => {
-  let result = await baseQuery(args, api, extraOptions);
-  
-  // Handle 401 Unauthorized - Token expired
+  const result = await baseQuery(args, api, extraOptions);
+
+  // On 401, simply log out — no silent refresh
   if (result.error && result.error.status === 401) {
-    console.log('Token expired, attempting refresh...');
-    
-    // Try to refresh the token
-    const refreshResult = await baseQuery({ url: '/auth/refresh', method: 'POST' }, api, extraOptions);
-    
-    if (refreshResult.data) {
-      const responseData = refreshResult.data as { data: { accessToken: string } };
-      const accessToken = responseData.data.accessToken;
-      
-      // Update the token in Redux state
-      api.dispatch(updateAccessToken(accessToken));
-      
-      // Retry the original query with new token
-      result = await baseQuery(args, api, extraOptions);
-    } else {
-      // Refresh failed - logout user
-      console.log('Token refresh failed, logging out...');
-      api.dispatch(logout());
-    }
+    api.dispatch(logout());
   }
-  
+
   return result;
 };
 

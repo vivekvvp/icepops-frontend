@@ -3,6 +3,7 @@ import { Plus_Jakarta_Sans } from "next/font/google"
 import "./globals.css"
 import { ReduxProvider } from "@/lib/ReduxProvider"
 import { Toaster } from "@/components/ui/sonner"
+import { GoogleOAuthProvider } from "@react-oauth/google"
 
 const plusJakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -29,7 +30,9 @@ export default function RootLayout({
         />
       </head>
       <body className={`${plusJakarta.variable} font-display bg-background-light dark:bg-background-dark text-[#181111] dark:text-white transition-colors duration-300`}>
-        <ReduxProvider>{children}</ReduxProvider>
+        <GoogleOAuthProvider clientId={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || ""}>
+          <ReduxProvider>{children}</ReduxProvider>
+        </GoogleOAuthProvider>
         <Toaster />
       </body>
     </html>

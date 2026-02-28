@@ -93,7 +93,7 @@ export default function RegisterPage() {
       className="min-h-screen flex items-center justify-center px-4 py-12"
       style={{ backgroundColor: 'rgb(246, 247, 249)' }}
     >
-      <div className="w-full space-y-6" style={{ maxWidth: '520px' }}>
+<div className="w-full space-y-6" style={{ maxWidth: '580px' }}>
 
         {/* ── Logo ── */}
         <div className="flex flex-col items-center gap-3">

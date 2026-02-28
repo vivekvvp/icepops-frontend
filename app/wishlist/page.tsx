@@ -3,20 +3,12 @@
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Heart, Trash2, ShoppingCart, Home } from 'lucide-react';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from '@/components/ui/breadcrumb';
+import { Heart, ShoppingCart, ChevronRight, Star, ArrowRight } from 'lucide-react';
 import { useGetWishlistQuery, useRemoveFromWishlistMutation, useAddToCartMutation } from '@/lib/services/api';
 import { UserProtectedRoute } from '@/lib/ProtectedRoute';
 import { toast } from 'sonner';
+import Header from '@/components/Header';
+import Footer from '@/components/Footer';
 
 function WishlistPage() {
   const router = useRouter();
@@ -45,128 +37,335 @@ function WishlistPage() {
     }
   };
 
+  /* ── Loading ── */
   if (isLoading) {
     return (
-      <div className="container mx-auto px-4 py-16">
-        <div className="flex items-center justify-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      <div className="relative flex min-h-screen w-full flex-col" style={{ backgroundColor: 'rgb(246, 247, 249)' }}>
+        <Header />
+        <div className="flex-1 flex items-center justify-center py-24">
+          <div className="flex flex-col items-center gap-4">
+            <div
+              className="w-10 h-10 rounded-full border-2 animate-spin"
+              style={{ borderColor: 'rgb(185, 28, 28)', borderTopColor: 'transparent' }}
+            />
+            <p className="text-sm font-medium" style={{ color: 'rgb(110, 118, 135)' }}>
+              Loading your wishlist...
+            </p>
+          </div>
         </div>
+        <Footer />
       </div>
     );
   }
 
+  /* ── Empty ── */
   if (items.length === 0) {
     return (
-      <div className="container mx-auto px-4 py-16">
-        <Card className="p-12 text-center">
-          <Heart className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-          <h2 className="text-2xl font-bold mb-2">Your wishlist is empty</h2>
-          <p className="text-gray-600 mb-6">Save your favorite products here</p>
-          <Link href="/products">
-            <Button>Browse Products</Button>
-          </Link>
-        </Card>
+      <div className="relative flex min-h-screen w-full flex-col" style={{ backgroundColor: 'rgb(246, 247, 249)' }}>
+        <Header />
+        <div className="flex-1 flex items-center justify-center py-24 px-4">
+          <div
+            className="flex flex-col items-center text-center p-10"
+            style={{
+              backgroundColor: 'rgb(255, 255, 255)',
+              border: '1px solid rgb(220, 223, 230)',
+              borderRadius: '6px',
+              maxWidth: '420px',
+              width: '100%',
+            }}
+          >
+            <div
+              className="w-16 h-16 flex items-center justify-center mb-4"
+              style={{
+                borderRadius: '8px',
+                backgroundColor: 'rgb(254, 242, 242)',
+                border: '1px solid rgb(254, 202, 202)',
+              }}
+            >
+              <Heart className="w-7 h-7" style={{ color: 'rgb(185, 28, 28)' }} />
+            </div>
+            <h2 className="text-lg font-bold mb-1" style={{ color: 'rgb(15, 20, 35)' }}>
+              Your wishlist is empty
+            </h2>
+            <p className="text-sm mb-6" style={{ color: 'rgb(110, 118, 135)' }}>
+              Save your favourite products here to buy them later
+            </p>
+            <Link href="/products">
+              <button
+                className="flex items-center gap-2 text-sm font-bold px-6 py-2.5 transition-colors"
+                style={{
+                  borderRadius: '6px',
+                  backgroundColor: 'rgb(185, 28, 28)',
+                  color: 'rgb(255, 255, 255)',
+                }}
+                onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'rgb(153, 27, 27)')}
+                onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'rgb(185, 28, 28)')}
+              >
+                Browse Products
+                <ArrowRight className="w-4 h-4 stroke-[2.5]" />
+              </button>
+            </Link>
+          </div>
+        </div>
+        <Footer />
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      {/* Breadcrumb */}
-      <Breadcrumb className="mb-6">
-        <BreadcrumbList>
-          <BreadcrumbItem>
-            <BreadcrumbLink asChild>
+    <div className="relative flex min-h-screen w-full flex-col" style={{ backgroundColor: 'rgb(246, 247, 249)' }}>
+      <Header />
+
+      <main className="flex-1">
+        <section className="px-4 md:px-6 py-8">
+          <div className="max-w-6xl mx-auto space-y-6">
+
+            {/* ── Breadcrumb ── */}
+            <div className="flex items-center gap-1.5 text-xs" style={{ color: 'rgb(150, 158, 175)' }}>
               <Link href="/">
-                <Home className="h-4 w-4" />
-              </Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbPage>Wishlist</BreadcrumbPage>
-          </BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
-
-      <h1 className="text-3xl font-bold mb-8">My Wishlist ({items.length})</h1>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {items.map((product: any) => {
-          // Safety check for missing product data
-          if (!product || !product._id) {
-            return null;
-          }
-          
-          return (
-            <Card key={product._id} className="overflow-hidden group">
-              <div className="relative aspect-square">
-                <Link href={`/products/${product._id}`}>
-                  <Image
-                    src={product.images?.[0] || '/placeholder.png'}
-                    alt={product.name || 'Product'}
-                    fill
-                    className="object-cover transition-transform group-hover:scale-105"
-                  />
-                </Link>
-                
-                <button
-                  onClick={() => handleRemove(product._id)}
-                  className="absolute top-2 right-2 p-2 bg-white rounded-full shadow-md hover:bg-red-50 transition-colors"
+                <span
+                  className="transition-colors cursor-pointer"
+                  onMouseEnter={e => (e.currentTarget.style.color = 'rgb(185, 28, 28)')}
+                  onMouseLeave={e => (e.currentTarget.style.color = 'rgb(150, 158, 175)')}
                 >
-                  <Trash2 className="w-4 h-4 text-red-500" />
+                  Home
+                </span>
+              </Link>
+              <ChevronRight className="w-3 h-3" />
+              <span className="font-semibold" style={{ color: 'rgb(55, 65, 81)' }}>My Wishlist</span>
+            </div>
+
+            {/* ── Page Title ── */}
+            <div
+              className="flex items-center justify-between pb-5"
+              style={{ borderBottom: '1px solid rgb(220, 223, 230)' }}
+            >
+              <div>
+                <h1 className="text-2xl font-extrabold tracking-tight" style={{ color: 'rgb(15, 20, 35)' }}>
+                  My Wishlist
+                </h1>
+                <p className="text-sm mt-0.5" style={{ color: 'rgb(110, 118, 135)' }}>
+                  {items.length} saved {items.length === 1 ? 'product' : 'products'}
+                </p>
+              </div>
+              <Link href="/products">
+                <button
+                  className="hidden md:flex items-center gap-1.5 text-sm font-bold transition-colors"
+                  style={{ color: 'rgb(185, 28, 28)' }}
+                  onMouseEnter={e => (e.currentTarget.style.color = 'rgb(153, 27, 27)')}
+                  onMouseLeave={e => (e.currentTarget.style.color = 'rgb(185, 28, 28)')}
+                >
+                  Continue Shopping
+                  <ArrowRight className="w-4 h-4 stroke-[2.5]" />
                 </button>
-              </div>
+              </Link>
+            </div>
 
-              <div className="p-4">
-                <Link href={`/products/${product._id}`}>
-                  <h3 className="font-semibold hover:text-primary mb-2 line-clamp-2">
-                    {product.name || 'Product'}
-                  </h3>
-                </Link>
+            {/* ── Grid ── */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+              {items.map((product: any) => {
+                if (!product?._id) return null;
+                const outOfStock = (product.stock || 0) === 0;
+                const hasDiscount = product.comparePrice && product.comparePrice > product.price;
+                const discountPct = hasDiscount
+                  ? Math.round(((product.comparePrice - product.price) / product.comparePrice) * 100)
+                  : 0;
 
-                <div className="flex items-center gap-2 mb-3">
-                  <span className="text-xl font-bold">₹{product.price || 0}</span>
-                  {product.comparePrice && (
-                    <>
-                      <span className="text-sm text-gray-500 line-through">
-                        ₹{product.comparePrice}
-                      </span>
-                      <span className="text-xs text-green-600 font-semibold">
-                        {Math.round(((product.comparePrice - product.price) / product.comparePrice) * 100)}% OFF
-                      </span>
-                    </>
-                  )}
-                </div>
-
-                {product.averageRating && (
-                  <div className="flex items-center gap-1 mb-3">
-                    <span className="text-yellow-500">★</span>
-                    <span className="text-sm font-medium">{product.averageRating.toFixed(1)}</span>
-                  </div>
-                )}
-
-                <div className="flex gap-2">
-                  {(product.stock || 0) > 0 ? (
-                    <Button
-                      onClick={() => handleAddToCart(product._id)}
-                      className="flex-1 gap-2"
-                      size="sm"
+                return (
+                  <div
+                    key={product._id}
+                    className="group flex flex-col transition-shadow"
+                    style={{
+                      backgroundColor: 'rgb(255, 255, 255)',
+                      border: '1px solid rgb(220, 223, 230)',
+                      borderRadius: '6px',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+                      overflow: 'hidden',
+                    }}
+                    onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 6px 18px rgba(0,0,0,0.09)')}
+                    onMouseLeave={e => (e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.04)')}
+                  >
+                    {/* ── Image ── */}
+                    <div
+                      className="relative overflow-hidden"
+                      style={{
+                        height: '180px',
+                        backgroundColor: 'rgb(243, 244, 246)',
+                      }}
                     >
-                      <ShoppingCart className="w-4 h-4" />
-                      Add to Cart
-                    </Button>
-                  ) : (
-                    <Button disabled className="flex-1" size="sm">
-                      Out of Stock
-                    </Button>
-                  )}
-                </div>
-              </div>
-            </Card>
-          );
-        })}
-      </div>
+                      <Link href={`/products/${product._id}`}>
+                        <Image
+                          src={product.images?.[0] || '/placeholder.png'}
+                          alt={product.name || 'Product'}
+                          fill
+                          className="object-cover transition-transform duration-300 group-hover:scale-105"
+                        />
+                      </Link>
+
+                      {/* Discount badge */}
+                      {hasDiscount && (
+                        <span
+                          className="absolute top-2 left-2 text-xs font-bold px-2 py-0.5"
+                          style={{
+                            borderRadius: '4px',
+                            backgroundColor: 'rgba(185, 28, 28, 0.85)',
+                            color: 'rgb(255, 255, 255)',
+                            backdropFilter: 'blur(4px)',
+                          }}
+                        >
+                          -{discountPct}%
+                        </span>
+                      )}
+
+                      {/* Heart / Remove button */}
+                      <button
+                        onClick={() => handleRemove(product._id)}
+                        className="absolute top-2 right-2 flex items-center justify-center w-7 h-7 transition-colors"
+                        style={{
+                          borderRadius: '50%',
+                          backgroundColor: 'rgb(255, 255, 255)',
+                          border: '1px solid rgb(254, 202, 202)',
+                          color: 'rgb(185, 28, 28)',
+                          boxShadow: '0 1px 4px rgba(0,0,0,0.10)',
+                        }}
+                        onMouseEnter={e => {
+                          e.currentTarget.style.backgroundColor = 'rgb(185, 28, 28)'
+                          e.currentTarget.style.color = 'rgb(255, 255, 255)'
+                        }}
+                        onMouseLeave={e => {
+                          e.currentTarget.style.backgroundColor = 'rgb(255, 255, 255)'
+                          e.currentTarget.style.color = 'rgb(185, 28, 28)'
+                        }}
+                        title="Remove from wishlist"
+                      >
+                        <Heart className="w-3.5 h-3.5" style={{ fill: 'currentColor' }} />
+                      </button>
+
+                      {/* Out of stock overlay */}
+                      {outOfStock && (
+                        <div
+                          className="absolute inset-0 flex items-center justify-center"
+                          style={{ backgroundColor: 'rgba(0,0,0,0.45)' }}
+                        >
+                          <span
+                            className="text-xs font-bold px-3 py-1"
+                            style={{
+                              borderRadius: '4px',
+                              backgroundColor: 'rgb(254, 242, 242)',
+                              color: 'rgb(185, 28, 28)',
+                              border: '1px solid rgb(254, 202, 202)',
+                            }}
+                          >
+                            Out of Stock
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* ── Body ── */}
+                    <div className="flex flex-col flex-1 p-3 gap-2">
+
+                      {/* Name */}
+                      <Link href={`/products/${product._id}`}>
+                        <h3
+                          className="font-bold text-sm leading-snug line-clamp-1 transition-colors"
+                          style={{ color: 'rgb(15, 20, 35)' }}
+                          onMouseEnter={e => (e.currentTarget.style.color = 'rgb(185, 28, 28)')}
+                          onMouseLeave={e => (e.currentTarget.style.color = 'rgb(15, 20, 35)')}
+                        >
+                          {product.name || 'Product'}
+                        </h3>
+                      </Link>
+
+                      {/* Description */}
+                      {product.description && (
+                        <p
+                          className="text-xs leading-relaxed"
+                          style={{
+                            color: 'rgb(110, 118, 135)',
+                            display: '-webkit-box',
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: 'vertical',
+                            overflow: 'hidden',
+                          }}
+                        >
+                          {product.description}
+                        </p>
+                      )}
+
+                      {/* Rating */}
+                      <div className="flex items-center gap-1">
+                        {Array.from({ length: 5 }, (_, i) => (
+                          <Star
+                            key={i}
+                            className="w-3 h-3"
+                            style={{
+                              fill: product.averageRating && i < Math.round(product.averageRating)
+                                ? 'rgb(250, 204, 21)'
+                                : 'transparent',
+                              color: product.averageRating && i < Math.round(product.averageRating)
+                                ? 'rgb(250, 204, 21)'
+                                : 'rgb(209, 213, 219)',
+                              strokeWidth: 2,
+                            }}
+                          />
+                        ))}
+                        {product.averageRating ? (
+                          <span className="text-xs font-semibold" style={{ color: 'rgb(110, 118, 135)' }}>
+                            {product.averageRating.toFixed(1)}
+                          </span>
+                        ) : (
+                          <span className="text-xs" style={{ color: 'rgb(209, 213, 219)' }}>
+                            No reviews yet
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Spacer */}
+                      <div className="flex-1" />
+
+                      {/* Price */}
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-lg font-extrabold" style={{ color: 'rgb(15, 20, 35)' }}>
+                          ₹{(product.price ?? 0).toFixed(2)}
+                        </span>
+                        {hasDiscount && (
+                          <span className="text-xs line-through" style={{ color: 'rgb(150, 158, 175)' }}>
+                            ₹{product.comparePrice}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Divider */}
+                      <div style={{ height: '1px', backgroundColor: 'rgb(240, 242, 245)' }} />
+
+                      {/* CTA */}
+                      <button
+                        onClick={() => !outOfStock && handleAddToCart(product._id)}
+                        disabled={outOfStock}
+                        className="w-full flex items-center justify-center gap-2 text-xs font-bold py-2 transition-colors disabled:cursor-not-allowed"
+                        style={{
+                          borderRadius: '4px',
+                          backgroundColor: outOfStock ? 'rgb(243, 244, 246)' : 'rgb(185, 28, 28)',
+                          color: outOfStock ? 'rgb(150, 158, 175)' : 'rgb(255, 255, 255)',
+                        }}
+                        onMouseEnter={e => { if (!outOfStock) e.currentTarget.style.backgroundColor = 'rgb(153, 27, 27)' }}
+                        onMouseLeave={e => { if (!outOfStock) e.currentTarget.style.backgroundColor = 'rgb(185, 28, 28)' }}
+                      >
+                        <ShoppingCart className="w-3.5 h-3.5 stroke-[2.5]" />
+                        {outOfStock ? 'Out of Stock' : 'Add to Cart'}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+          </div>
+        </section>
+      </main>
+
+      <Footer />
     </div>
   );
 }

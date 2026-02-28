@@ -1,22 +1,18 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Search, UserCheck, UserX } from 'lucide-react';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Search, UserCheck, UserX, Users } from 'lucide-react';
 import { useGetAllUsersQuery, useToggleBlockUserMutation } from '@/lib/services/api';
 import { toast } from 'sonner';
 
 export default function AdminUsersPage() {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
-  
-  const { data: usersData, isLoading, error } = useGetAllUsersQuery({ 
-    page, 
-    limit: 20, 
-    search: search || undefined 
+  const [page, setPage] = useState(1);
+
+  const { data: usersData, isLoading, error } = useGetAllUsersQuery({
+    page,
+    limit: 20,
+    search: search || undefined,
   });
   const [toggleBlockUser] = useToggleBlockUserMutation();
 
@@ -24,177 +20,296 @@ export default function AdminUsersPage() {
   const totalPages = usersData?.data?.pagination?.totalPages || 1;
 
   useEffect(() => {
-    if (error) {
-      toast.error('Failed to load users');
-    }
+    if (error) toast.error('Failed to load users');
   }, [error]);
 
   const handleToggleBlock = async (userId: string) => {
     try {
       await toggleBlockUser(userId).unwrap();
       toast.success('User status updated');
-    } catch (error: any) {
+    } catch {
       toast.error('Failed to update user status');
     }
   };
 
-  const handleSearch = () => {
-    setPage(1);
-    setSearch(searchQuery);
-  };
-
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="min-h-screen p-8 space-y-6" style={{ backgroundColor: 'rgb(246, 247, 249)' }}>
+
+      {/* Header */}
+      <div
+        className="flex items-center justify-between pb-6"
+        style={{ borderBottom: '1px solid rgb(220, 223, 230)' }}
+      >
         <div>
-          <h1 className="text-3xl font-bold">Users Management</h1>
-          <p className="text-gray-600 mt-1">Manage customer accounts</p>
+          <h1 className="text-2xl font-bold tracking-tight" style={{ color: 'rgb(15, 20, 35)' }}>
+            Users
+          </h1>
+          <p className="text-sm mt-0.5" style={{ color: 'rgb(110, 118, 135)' }}>
+            Manage customer accounts
+          </p>
         </div>
       </div>
 
-      {/* Search */}
-      <Card className="p-4">
-        <div className="flex gap-4">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-            <Input
-              placeholder="Search by name or email..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-              className="pl-10"
-            />
-          </div>
-          <Button onClick={handleSearch}>Search</Button>
-        </div>
-      </Card>
+      {/* Search Bar */}
+      <div
+        className="flex items-center gap-3 px-4 py-3 rounded-md"
+        style={{
+          backgroundColor: 'rgb(255, 255, 255)',
+          border: '1px solid rgb(220, 223, 230)',
+        }}
+      >
+        <Search
+          className="w-4 h-4 shrink-0 stroke-[2.5]"
+          style={{ color: 'rgb(185, 28, 28)' }}
+        />
+        <input
+          type="text"
+          placeholder="Search by name or email..."
+          value={search}
+          onChange={e => { setSearch(e.target.value); setPage(1) }}
+          className="flex-1 text-sm outline-none bg-transparent"
+          style={{ color: 'rgb(30, 35, 50)' }}
+        />
+        {search && (
+          <button
+            onClick={() => { setSearch(''); setPage(1) }}
+            className="text-xs font-semibold transition-colors"
+            style={{ color: 'rgb(156, 163, 175)' }}
+            onMouseEnter={e => (e.currentTarget.style.color = 'rgb(75, 85, 99)')}
+            onMouseLeave={e => (e.currentTarget.style.color = 'rgb(156, 163, 175)')}
+          >
+            Clear
+          </button>
+        )}
+      </div>
 
-      {/* Users List */}
-      {isLoading ? (
-        <div className="flex items-center justify-center py-16">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-        </div>
-      ) : users.length === 0 ? (
-        <Card className="p-12 text-center">
-          <p className="text-gray-600">No users found</p>
-        </Card>
-      ) : (
-        <Card>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 dark:bg-gray-800">
+      {/* Table */}
+      <div
+        className="rounded-md overflow-hidden"
+        style={{
+          backgroundColor: 'rgb(255, 255, 255)',
+          border: '1px solid rgb(220, 223, 230)',
+        }}
+      >
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr
+                style={{
+                  borderBottom: '1px solid rgb(220, 223, 230)',
+                  backgroundColor: 'rgb(248, 249, 251)',
+                }}
+              >
+                {['#', 'User', 'Email', 'Role', 'Status', 'Joined', 'Actions'].map((h, i) => (
+                  <th
+                    key={h}
+                    className={`px-5 py-3.5 text-xs font-bold uppercase tracking-wider ${i === 6 ? 'text-right' : 'text-left'}`}
+                    style={{ color: 'rgb(100, 108, 125)' }}
+                  >
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {isLoading ? (
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    User
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Email
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Role
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Joined
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
+                  <td colSpan={7} className="px-5 py-12 text-center text-sm" style={{ color: 'rgb(156, 163, 175)' }}>
+                    Loading users...
+                  </td>
                 </tr>
-              </thead>
-              <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
-                {users.map((user: any) => (
-                  <tr key={user._id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div className="flex-shrink-0 h-10 w-10 bg-primary/10 rounded-full flex items-center justify-center">
-                          <span className="text-primary font-semibold">
-                            {user.name.charAt(0).toUpperCase()}
-                          </span>
-                        </div>
-                        <div className="ml-4">
-                          <div className="text-sm font-medium">{user.name}</div>
+              ) : users.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="px-5 py-12 text-center" style={{ color: 'rgb(156, 163, 175)' }}>
+                    <div className="flex flex-col items-center gap-2">
+                      <Users className="w-8 h-8" style={{ color: 'rgb(209, 213, 219)' }} />
+                      <p className="text-sm font-medium">
+                        {search ? `No users found for "${search}"` : 'No users yet'}
+                      </p>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                users.map((user: any, index: number) => (
+                  <tr
+                    key={user.id}
+                    style={{
+                      borderBottom: index < users.length - 1 ? '1px solid rgb(240, 242, 245)' : 'none',
+                    }}
+                    onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'rgb(252, 252, 253)')}
+                    onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+                  >
+                    {/* # */}
+                    <td className="px-5 py-4 text-xs font-bold" style={{ color: 'rgb(185, 28, 28)' }}>
+                      {(page - 1) * 20 + index + 1}
+                    </td>
+
+                    {/* User */}
+                    <td className="px-5 py-4">
+                      <div className="flex items-center gap-3">
+                        {user.profileImage ? (
+                          <img
+                            src={user.profileImage}
+                            alt={user.name}
+                            className="w-9 h-9 object-cover shrink-0"
+                            style={{
+                              borderRadius: '6px',
+                              border: '1px solid rgb(220, 223, 230)',
+                            }}
+                          />
+                        ) : (
+                          <div
+                            className="w-9 h-9 shrink-0 flex items-center justify-center text-sm font-bold"
+                            style={{
+                              borderRadius: '6px',
+                              backgroundColor: 'rgb(254, 242, 242)',
+                              border: '1px solid rgb(254, 202, 202)',
+                              color: 'rgb(185, 28, 28)',
+                            }}
+                          >
+                            {user.name?.charAt(0).toUpperCase()}
+                          </div>
+                        )}
+                        <div>
+                          <p className="font-semibold text-sm" style={{ color: 'rgb(15, 20, 35)' }}>
+                            {user.name}
+                          </p>
+                          {user.phone && (
+                            <p className="text-xs mt-0.5" style={{ color: 'rgb(150, 158, 175)' }}>
+                              {user.phone}
+                            </p>
+                          )}
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-600">{user.email}</div>
+
+                    {/* Email */}
+                    <td className="px-5 py-4 text-sm" style={{ color: 'rgb(110, 118, 135)' }}>
+                      {user.email}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        user.role === 'ADMIN' 
-                          ? 'bg-purple-100 text-purple-800' 
-                          : 'bg-blue-100 text-blue-800'
-                      }`}>
+
+                    {/* Role */}
+                    <td className="px-5 py-4">
+                      <span
+                        className="text-xs font-bold px-2.5 py-1"
+                        style={
+                          user.role === 'ADMIN'
+                            ? { borderRadius: '4px', backgroundColor: 'rgb(245, 243, 255)', color: 'rgb(109, 40, 217)', border: '1px solid rgb(221, 214, 254)' }
+                            : { borderRadius: '4px', backgroundColor: 'rgb(239, 246, 255)', color: 'rgb(29, 78, 216)', border: '1px solid rgb(219, 234, 254)' }
+                        }
+                      >
                         {user.role}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        user.isBlocked 
-                          ? 'bg-red-100 text-red-800' 
-                          : 'bg-green-100 text-green-800'
-                      }`}>
+
+                    {/* Status */}
+                    <td className="px-5 py-4">
+                      <span
+                        className="text-xs font-bold px-2.5 py-1"
+                        style={
+                          user.isBlocked
+                            ? { borderRadius: '4px', backgroundColor: 'rgb(254, 242, 242)', color: 'rgb(185, 28, 28)', border: '1px solid rgb(254, 202, 202)' }
+                            : { borderRadius: '4px', backgroundColor: 'rgb(240, 253, 244)', color: 'rgb(21, 91, 48)', border: '1px solid rgb(187, 247, 208)' }
+                        }
+                      >
                         {user.isBlocked ? 'Blocked' : 'Active'}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                      {new Date(user.createdAt).toLocaleDateString()}
+
+                    {/* Joined */}
+                    <td className="px-5 py-4 text-sm" style={{ color: 'rgb(110, 118, 135)' }}>
+                      {new Date(user.createdAt).toLocaleDateString('en-IN', {
+                        day: '2-digit', month: 'short', year: 'numeric',
+                      })}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+
+                    {/* Actions */}
+                    <td className="px-5 py-4 text-right">
                       {user.role !== 'ADMIN' && (
-                        <Button
-                          variant={user.isBlocked ? 'outline' : 'destructive'}
-                          size="sm"
+                        <button
                           onClick={() => handleToggleBlock(user.id)}
-                          className="gap-2"
+                          className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 transition-colors ml-auto"
+                          style={
+                            user.isBlocked
+                              ? { borderRadius: '4px', border: '1px solid rgb(187, 247, 208)', backgroundColor: 'rgb(240, 253, 244)', color: 'rgb(21, 91, 48)' }
+                              : { borderRadius: '4px', border: '1px solid rgb(254, 202, 202)', backgroundColor: 'rgb(254, 242, 242)', color: 'rgb(185, 28, 28)' }
+                          }
+                          onMouseEnter={e => {
+                            if (user.isBlocked) {
+                              e.currentTarget.style.backgroundColor = 'rgb(220, 252, 231)'
+                            } else {
+                              e.currentTarget.style.backgroundColor = 'rgb(254, 226, 226)'
+                            }
+                          }}
+                          onMouseLeave={e => {
+                            if (user.isBlocked) {
+                              e.currentTarget.style.backgroundColor = 'rgb(240, 253, 244)'
+                            } else {
+                              e.currentTarget.style.backgroundColor = 'rgb(254, 242, 242)'
+                            }
+                          }}
                         >
                           {user.isBlocked ? (
                             <>
-                              <UserCheck className="w-4 h-4" />
+                              <UserCheck className="w-3.5 h-3.5 stroke-[2.5]" />
                               Unblock
                             </>
                           ) : (
                             <>
-                              <UserX className="w-4 h-4" />
+                              <UserX className="w-3.5 h-3.5 stroke-[2.5]" />
                               Block
                             </>
                           )}
-                        </Button>
+                        </button>
                       )}
                     </td>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Card>
-      )}
-
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex justify-center gap-2">
-          <Button
-            variant="outline"
-            disabled={page === 1}
-            onClick={() => setPage(page - 1)}
-          >
-            Previous
-          </Button>
-          <span className="flex items-center px-4">
-            Page {page} of {totalPages}
-          </span>
-          <Button
-            variant="outline"
-            disabled={page === totalPages}
-            onClick={() => setPage(page + 1)}
-          >
-            Next
-          </Button>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
-      )}
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div
+            className="flex items-center justify-between px-5 py-4"
+            style={{
+              borderTop: '1px solid rgb(240, 242, 245)',
+              backgroundColor: 'rgb(248, 249, 251)',
+            }}
+          >
+            <p className="text-xs" style={{ color: 'rgb(150, 158, 175)' }}>
+              Page{' '}
+              <span className="font-bold" style={{ color: 'rgb(30, 35, 50)' }}>{page}</span>
+              {' '}of{' '}
+              <span className="font-bold" style={{ color: 'rgb(30, 35, 50)' }}>{totalPages}</span>
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setPage(page - 1)}
+                disabled={page === 1}
+                className="text-xs font-bold px-3 py-1.5 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                style={{ borderRadius: '4px', border: '1px solid rgb(220, 223, 230)', color: 'rgb(30, 35, 50)', backgroundColor: 'rgb(255, 255, 255)' }}
+                onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'rgb(243, 244, 246)')}
+                onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'rgb(255, 255, 255)')}
+              >
+                ← Prev
+              </button>
+              <button
+                onClick={() => setPage(page + 1)}
+                disabled={page >= totalPages}
+                className="text-xs font-bold px-3 py-1.5 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                style={{ borderRadius: '4px', border: '1px solid rgb(220, 223, 230)', color: 'rgb(30, 35, 50)', backgroundColor: 'rgb(255, 255, 255)' }}
+                onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'rgb(243, 244, 246)')}
+                onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'rgb(255, 255, 255)')}
+              >
+                Next →
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

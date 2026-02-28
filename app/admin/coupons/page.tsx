@@ -1,10 +1,8 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Plus, Edit, Trash2, Tag, Power } from 'lucide-react';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { Plus, Edit, Trash2, Tag, Power, AlertTriangle } from 'lucide-react';
 import { useGetAllCouponsQuery, useToggleCouponStatusMutation, useDeleteCouponMutation } from '@/lib/services/api';
 import { formatShortDate } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -12,171 +10,414 @@ import { toast } from 'sonner';
 export default function AdminCouponsPage() {
   const { data: couponsData, isLoading, error } = useGetAllCouponsQuery({ page: 1, limit: 100 });
   const [toggleCouponStatus] = useToggleCouponStatusMutation();
-  const [deleteCoupon] = useDeleteCouponMutation();
+  const [deleteCoupon, { isLoading: isDeleting }] = useDeleteCouponMutation();
+
+  const [confirmDialog, setConfirmDialog] = useState<{
+    open: boolean
+    couponId: string
+    couponCode: string
+  }>({ open: false, couponId: '', couponCode: '' })
 
   const coupons = couponsData?.data || [];
 
   useEffect(() => {
-    if (error) {
-      toast.error('Failed to load coupons');
-    }
+    if (error) toast.error('Failed to load coupons');
   }, [error]);
+
+  const openConfirm = (id: string, code: string) =>
+    setConfirmDialog({ open: true, couponId: id, couponCode: code })
+
+  const closeConfirm = () =>
+    setConfirmDialog({ open: false, couponId: '', couponCode: '' })
 
   const handleToggleStatus = async (couponId: string) => {
     try {
       await toggleCouponStatus(couponId).unwrap();
       toast.success('Coupon status updated');
-    } catch (error: any) {
+    } catch {
       toast.error('Failed to update coupon status');
     }
   };
 
-  const handleDelete = async (couponId: string) => {
-    if (!window.confirm('Are you sure you want to delete this coupon?')) return;
-
+  const handleDelete = async () => {
     try {
-      await deleteCoupon(couponId).unwrap();
+      await deleteCoupon(confirmDialog.couponId).unwrap();
       toast.success('Coupon deleted successfully');
-    } catch (error: any) {
+      closeConfirm();
+    } catch {
       toast.error('Failed to delete coupon');
+      closeConfirm();
     }
   };
 
-  const isExpired = (expiryDate: string) => {
-    return new Date(expiryDate) < new Date();
-  };
+  const isExpired = (expiryDate: string) => new Date(expiryDate) < new Date();
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="min-h-screen p-8 space-y-6" style={{ backgroundColor: 'rgb(246, 247, 249)' }}>
+
+      {/* ── Confirm Delete Dialog ── */}
+      {confirmDialog.open && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center"
+          style={{ backgroundColor: 'rgba(0,0,0,0.35)' }}
+          onClick={closeConfirm}
+        >
+          <div
+            className="w-full max-w-sm mx-4"
+            style={{
+              backgroundColor: 'rgb(255, 255, 255)',
+              borderRadius: '8px',
+              border: '1px solid rgb(220, 223, 230)',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div
+              className="flex items-start gap-3 p-5"
+              style={{ borderBottom: '1px solid rgb(240, 242, 245)' }}
+            >
+              <div
+                className="flex items-center justify-center w-9 h-9 shrink-0"
+                style={{
+                  borderRadius: '6px',
+                  backgroundColor: 'rgb(254, 242, 242)',
+                  border: '1px solid rgb(254, 202, 202)',
+                }}
+              >
+                <AlertTriangle className="w-4 h-4" style={{ color: 'rgb(185, 28, 28)', strokeWidth: 2.5 }} />
+              </div>
+              <div>
+                <p className="text-sm font-bold" style={{ color: 'rgb(15, 20, 35)' }}>
+                  Delete Coupon
+                </p>
+                <p className="text-xs mt-0.5" style={{ color: 'rgb(110, 118, 135)' }}>
+                  This action cannot be undone
+                </p>
+              </div>
+            </div>
+
+            {/* Body */}
+            <div className="px-5 py-4">
+              <p className="text-sm" style={{ color: 'rgb(55, 65, 81)' }}>
+                Are you sure you want to delete coupon{' '}
+                <span className="font-bold" style={{ color: 'rgb(15, 20, 35)' }}>
+                  "{confirmDialog.couponCode}"
+                </span>
+                ? This will permanently remove the coupon.
+              </p>
+            </div>
+
+            {/* Footer */}
+            <div
+              className="flex items-center justify-end gap-2 px-5 py-4"
+              style={{
+                borderTop: '1px solid rgb(240, 242, 245)',
+                backgroundColor: 'rgb(248, 249, 251)',
+                borderRadius: '0 0 8px 8px',
+              }}
+            >
+              <button
+                onClick={closeConfirm}
+                disabled={isDeleting}
+                className="text-xs font-semibold px-4 py-2 transition-colors disabled:opacity-50"
+                style={{
+                  borderRadius: '6px',
+                  border: '1px solid rgb(220, 223, 230)',
+                  backgroundColor: 'rgb(255, 255, 255)',
+                  color: 'rgb(55, 65, 81)',
+                }}
+                onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'rgb(246, 247, 249)')}
+                onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'rgb(255, 255, 255)')}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={isDeleting}
+                className="text-xs font-bold px-4 py-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ borderRadius: '6px', backgroundColor: 'rgb(185, 28, 28)', color: 'rgb(255, 255, 255)' }}
+                onMouseEnter={e => { if (!isDeleting) e.currentTarget.style.backgroundColor = 'rgb(153, 27, 27)' }}
+                onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'rgb(185, 28, 28)')}
+              >
+                {isDeleting ? 'Deleting...' : 'Delete Coupon'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Header ── */}
+      <div
+        className="flex items-center justify-between pb-6"
+        style={{ borderBottom: '1px solid rgb(220, 223, 230)' }}
+      >
         <div>
-          <h1 className="text-3xl font-bold">Coupons & Discounts</h1>
-          <p className="text-gray-600 mt-1">Manage discount coupons and promotions</p>
+          <h1 className="text-2xl font-bold tracking-tight" style={{ color: 'rgb(15, 20, 35)' }}>
+            Coupons
+          </h1>
+          <p className="text-sm mt-0.5" style={{ color: 'rgb(110, 118, 135)' }}>
+            Manage discount coupons and promotions
+          </p>
         </div>
         <Link href="/admin/coupons/create">
-          <Button className="gap-2">
-            <Plus className="w-4 h-4" />
+          <button
+            className="flex items-center gap-2 text-sm font-bold px-4 py-2.5 rounded-md transition-all"
+            style={{ backgroundColor: 'rgb(185, 28, 28)', color: 'rgb(255, 255, 255)' }}
+            onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'rgb(153, 27, 27)')}
+            onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'rgb(185, 28, 28)')}
+          >
+            <Plus className="w-4 h-4 stroke-[3]" />
             Create Coupon
-          </Button>
+          </button>
         </Link>
       </div>
 
-      {isLoading ? (
-        <div className="flex items-center justify-center py-16">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-        </div>
-      ) : coupons.length === 0 ? (
-        <Card className="p-12 text-center">
-          <Tag className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-          <h2 className="text-2xl font-bold mb-2">No coupons yet</h2>
-          <p className="text-gray-600 mb-6">Create your first coupon to offer discounts</p>
-          <Link href="/admin/coupons/create">
-            <Button className="gap-2">
-              <Plus className="w-4 h-4" />
-              Create Coupon
-            </Button>
-          </Link>
-        </Card>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {coupons.map((coupon: any) => {
-            const expired = isExpired(coupon.expiryDate);
-            const usagePercent = coupon.usageLimit 
-              ? (coupon.usedCount / coupon.usageLimit) * 100 
-              : 0;
-
-            return (
-              <Card key={coupon._id} className="p-6">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <h3 className="text-xl font-bold font-mono">{coupon.code}</h3>
-                      {!coupon.isActive && (
-                        <span className="px-2 py-1 bg-gray-100 text-gray-800 text-xs rounded-full">
-                          Inactive
-                        </span>
-                      )}
-                      {expired && (
-                        <span className="px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full">
-                          Expired
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-sm text-gray-600 mb-3">{coupon.description}</p>
-                  </div>
-                </div>
-
-                <div className="space-y-2 mb-4">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Discount:</span>
-                    <span className="font-semibold">
-                      {coupon.type === 'PERCENTAGE' 
-                        ? `${coupon.value}%` 
-                        : `₹${coupon.value}`}
-                      {coupon.maxDiscount && ` (max ₹${coupon.maxDiscount})`}
-                    </span>
-                  </div>
-                  
-                  {coupon.minCartValue && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Min. Cart Value:</span>
-                      <span className="font-semibold">₹{coupon.minCartValue}</span>
-                    </div>
-                  )}
-
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Valid Until:</span>
-                    <span className="font-semibold">
-                      {formatShortDate(coupon.expiryDate)}
-                    </span>
-                  </div>
-
-                  {coupon.usageLimit && (
-                    <div>
-                      <div className="flex justify-between text-sm mb-1">
-                        <span className="text-gray-600">Usage:</span>
-                        <span className="font-semibold">
-                          {coupon.usedCount} / {coupon.usageLimit}
-                        </span>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div
-                          className="bg-primary h-2 rounded-full transition-all"
-                          style={{ width: `${Math.min(usagePercent, 100)}%` }}
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleToggleStatus(coupon._id)}
-                    className="flex-1 gap-2"
+      {/* ── Table ── */}
+      <div
+        className="rounded-md overflow-hidden"
+        style={{
+          backgroundColor: 'rgb(255, 255, 255)',
+          border: '1px solid rgb(220, 223, 230)',
+        }}
+      >
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr
+                style={{
+                  borderBottom: '1px solid rgb(220, 223, 230)',
+                  backgroundColor: 'rgb(248, 249, 251)',
+                }}
+              >
+                {['#', 'Code', 'Discount', 'Min. Cart', 'Usage', 'Expiry', 'Status', 'Actions'].map((h, i) => (
+                  <th
+                    key={h}
+                    className={`px-5 py-3.5 text-xs font-bold uppercase tracking-wider ${i === 7 ? 'text-right' : 'text-left'}`}
+                    style={{ color: 'rgb(100, 108, 125)' }}
                   >
-                    <Power className="w-4 h-4" />
-                    {coupon.isActive ? 'Deactivate' : 'Activate'}
-                  </Button>
-                  <Link href={`/admin/coupons/${coupon._id}`}>
-                    <Button variant="outline" size="sm">
-                      <Edit className="w-4 h-4" />
-                    </Button>
-                  </Link>
-                  <Button 
-                    variant="destructive" 
-                    size="sm"
-                    onClick={() => handleDelete(coupon._id)}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
-              </Card>
-            );
-          })}
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {isLoading ? (
+                <tr>
+                  <td colSpan={8} className="px-5 py-12 text-center text-sm" style={{ color: 'rgb(156, 163, 175)' }}>
+                    Loading coupons...
+                  </td>
+                </tr>
+              ) : coupons.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="px-5 py-12 text-center">
+                    <div className="flex flex-col items-center gap-2">
+                      <Tag className="w-8 h-8" style={{ color: 'rgb(209, 213, 219)' }} />
+                      <p className="text-sm font-medium" style={{ color: 'rgb(156, 163, 175)' }}>
+                        No coupons yet
+                      </p>
+                      <Link href="/admin/coupons/create">
+                        <button
+                          className="text-xs font-bold mt-1"
+                          style={{ color: 'rgb(185, 28, 28)' }}
+                        >
+                          + Create your first coupon
+                        </button>
+                      </Link>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                coupons.map((coupon: any, index: number) => {
+                  const expired = isExpired(coupon.expiryDate);
+                  const usagePercent = coupon.usageLimit
+                    ? Math.min((coupon.usedCount / coupon.usageLimit) * 100, 100)
+                    : 0;
+
+                  return (
+                    <tr
+                      key={coupon._id}
+                      style={{
+                        borderBottom: index < coupons.length - 1 ? '1px solid rgb(240, 242, 245)' : 'none',
+                      }}
+                      onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'rgb(252, 252, 253)')}
+                      onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+                    >
+                      {/* # */}
+                      <td className="px-5 py-4 text-xs font-bold" style={{ color: 'rgb(185, 28, 28)' }}>
+                        {index + 1}
+                      </td>
+
+                      {/* Code + Description */}
+                      <td className="px-5 py-4">
+                        <p
+                          className="font-bold tracking-widest text-sm"
+                          style={{ color: 'rgb(15, 20, 35)', fontFamily: 'monospace' }}
+                        >
+                          {coupon.code}
+                        </p>
+                        {coupon.description && (
+                          <p className="text-xs mt-0.5 max-w-[160px] truncate" style={{ color: 'rgb(150, 158, 175)' }}>
+                            {coupon.description}
+                          </p>
+                        )}
+                      </td>
+
+                      {/* Discount */}
+                      <td className="px-5 py-4">
+                        <span
+                          className="text-xs font-bold px-2.5 py-1 inline-flex"
+                          style={{
+                            borderRadius: '4px',
+                            backgroundColor: 'rgb(240, 253, 244)',
+                            color: 'rgb(21, 91, 48)',
+                            border: '1px solid rgb(187, 247, 208)',
+                          }}
+                        >
+                          {coupon.type === 'PERCENTAGE' ? `${coupon.value}%` : `₹${coupon.value}`}
+                        </span>
+                        {coupon.maxDiscount && (
+                          <p className="text-xs mt-1" style={{ color: 'rgb(150, 158, 175)' }}>
+                            max ₹{coupon.maxDiscount}
+                          </p>
+                        )}
+                      </td>
+
+                      {/* Min Cart */}
+                      <td className="px-5 py-4 text-sm font-semibold" style={{ color: 'rgb(55, 65, 81)' }}>
+                        {coupon.minCartValue ? `₹${coupon.minCartValue}` : '—'}
+                      </td>
+
+                      {/* Usage */}
+                      <td className="px-5 py-4">
+                        {coupon.usageLimit ? (
+                          <div style={{ minWidth: '100px' }}>
+                            <div className="flex justify-between text-xs mb-1">
+                              <span style={{ color: 'rgb(110, 118, 135)' }}>Used</span>
+                              <span className="font-bold" style={{ color: 'rgb(15, 20, 35)' }}>
+                                {coupon.usedCount}/{coupon.usageLimit}
+                              </span>
+                            </div>
+                            <div
+                              className="w-full h-1.5 rounded-full overflow-hidden"
+                              style={{ backgroundColor: 'rgb(229, 231, 235)' }}
+                            >
+                              <div
+                                className="h-full rounded-full transition-all"
+                                style={{
+                                  width: `${usagePercent}%`,
+                                  backgroundColor: usagePercent >= 90
+                                    ? 'rgb(185, 28, 28)'
+                                    : usagePercent >= 60
+                                    ? 'rgb(161, 72, 10)'
+                                    : 'rgb(21, 91, 48)',
+                                }}
+                              />
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="text-xs" style={{ color: 'rgb(150, 158, 175)' }}>Unlimited</span>
+                        )}
+                      </td>
+
+                      {/* Expiry */}
+                      <td className="px-5 py-4">
+                        <p
+                          className="text-sm font-semibold"
+                          style={{ color: expired ? 'rgb(185, 28, 28)' : 'rgb(55, 65, 81)' }}
+                        >
+                          {formatShortDate(coupon.expiryDate)}
+                        </p>
+                        {expired && (
+                          <p className="text-xs mt-0.5" style={{ color: 'rgb(185, 28, 28)' }}>
+                            Expired
+                          </p>
+                        )}
+                      </td>
+
+                      {/* Status */}
+                      <td className="px-5 py-4">
+                        <span
+                          className="text-xs font-bold px-2.5 py-1"
+                          style={
+                            !coupon.isActive || expired
+                              ? { borderRadius: '4px', backgroundColor: 'rgb(254, 242, 242)', color: 'rgb(185, 28, 28)', border: '1px solid rgb(254, 202, 202)' }
+                              : { borderRadius: '4px', backgroundColor: 'rgb(240, 253, 244)', color: 'rgb(21, 91, 48)', border: '1px solid rgb(187, 247, 208)' }
+                          }
+                        >
+                          {!coupon.isActive ? 'Inactive' : expired ? 'Expired' : 'Active'}
+                        </span>
+                      </td>
+
+                      {/* Actions */}
+                      <td className="px-5 py-4">
+                        <div className="flex items-center justify-end gap-1">
+
+                          {/* Toggle */}
+                          <button
+                            onClick={() => handleToggleStatus(coupon._id)}
+                            className="p-1.5 transition-colors"
+                            style={{ borderRadius: '4px', color: 'rgb(100, 108, 125)' }}
+                            title={coupon.isActive ? 'Deactivate' : 'Activate'}
+                            onMouseEnter={e => {
+                              e.currentTarget.style.color = coupon.isActive ? 'rgb(161, 72, 10)' : 'rgb(21, 91, 48)'
+                              e.currentTarget.style.backgroundColor = coupon.isActive ? 'rgb(255, 251, 235)' : 'rgb(240, 253, 244)'
+                            }}
+                            onMouseLeave={e => {
+                              e.currentTarget.style.color = 'rgb(100, 108, 125)'
+                              e.currentTarget.style.backgroundColor = 'transparent'
+                            }}
+                          >
+                            <Power className="w-4 h-4 stroke-[2.5]" />
+                          </button>
+
+                          {/* Edit */}
+                          <Link href={`/admin/coupons/${coupon._id}`}>
+                            <button
+                              className="p-1.5 transition-colors"
+                              style={{ borderRadius: '4px', color: 'rgb(100, 108, 125)' }}
+                              title="Edit"
+                              onMouseEnter={e => {
+                                e.currentTarget.style.color = 'rgb(29, 78, 216)'
+                                e.currentTarget.style.backgroundColor = 'rgb(239, 246, 255)'
+                              }}
+                              onMouseLeave={e => {
+                                e.currentTarget.style.color = 'rgb(100, 108, 125)'
+                                e.currentTarget.style.backgroundColor = 'transparent'
+                              }}
+                            >
+                              <Edit className="w-4 h-4 stroke-[2.5]" />
+                            </button>
+                          </Link>
+
+                          {/* Delete */}
+                          <button
+                            onClick={() => openConfirm(coupon._id, coupon.code)}
+                            disabled={isDeleting}
+                            className="p-1.5 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                            style={{ borderRadius: '4px', color: 'rgb(150, 158, 175)' }}
+                            title="Delete"
+                            onMouseEnter={e => {
+                              e.currentTarget.style.color = 'rgb(185, 28, 28)'
+                              e.currentTarget.style.backgroundColor = 'rgb(254, 242, 242)'
+                            }}
+                            onMouseLeave={e => {
+                              e.currentTarget.style.color = 'rgb(150, 158, 175)'
+                              e.currentTarget.style.backgroundColor = 'transparent'
+                            }}
+                          >
+                            <Trash2 className="w-4 h-4 stroke-[2.5]" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })
+              )}
+            </tbody>
+          </table>
         </div>
-      )}
+      </div>
     </div>
   );
 }

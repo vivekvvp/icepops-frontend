@@ -1,11 +1,9 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Search, ShoppingCart, LogOut, User, Heart, Package, MapPin, Settings } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import { Search, ShoppingCart, LogOut, User, Heart, Package, MapPin, ChevronDown, Menu, X } from "lucide-react"
 import { useLogoutMutation, useGetCartQuery } from "@/lib/services/api"
 import { useAppDispatch, useAppSelector } from "@/lib/store/hooks"
 import { selectIsAuthenticated, logout as logoutAction } from "@/lib/store/authSlice"
@@ -19,18 +17,32 @@ export default function Header() {
   const [logout, { isLoading: isLoggingOut }] = useLogoutMutation()
   const { data: cartData } = useGetCartQuery(undefined, { skip: !isAuthenticated })
   const [showUserMenu, setShowUserMenu] = useState(false)
+  const [showMobileMenu, setShowMobileMenu] = useState(false)
+  const [searchValue, setSearchValue] = useState("")
+  const menuRef = useRef<HTMLDivElement>(null)
 
   const cartItemCount = cartData?.data?.items?.length || 0
 
+  /* close dropdown on outside click */
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setShowUserMenu(false)
+      }
+    }
+    document.addEventListener("mousedown", handler)
+    return () => document.removeEventListener("mousedown", handler)
+  }, [])
+
   const handleLogout = async () => {
+    setShowUserMenu(false)
     try {
       await logout().unwrap()
       dispatch(logoutAction())
       toast.success("Logged out successfully")
       router.push("/")
       router.refresh()
-    } catch (error) {
-      // Even if API call fails, clear local state
+    } catch {
       dispatch(logoutAction())
       toast.success("Logged out successfully")
       router.push("/")
@@ -38,159 +50,382 @@ export default function Header() {
     }
   }
 
+  const navLinks = [
+    { label: "Home", href: "/" },
+    { label: "Products", href: "/products" },
+    { label: "About", href: "/about" },
+  ]
+
+  const menuItems = [
+    { label: "My Orders", href: "/orders", icon: Package },
+    { label: "Wishlist", href: "/wishlist", icon: Heart },
+    { label: "Addresses", href: "/addresses", icon: MapPin },
+    { label: "Profile", href: "/profile", icon: User },
+  ]
+
   return (
-    <header className="flex items-center justify-between whitespace-nowrap border-b border-solid border-[#f4f0f0] dark:border-[#332222] px-10 py-4 bg-white/80 dark:bg-background-dark/80 backdrop-blur-md sticky top-0 z-50">
-      <div className="flex items-center gap-8">
-        <Link href="/" className="flex items-center gap-4 text-primary">
-          <div className="size-8">
-            <svg fill="none" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
-              <path
-                clipRule="evenodd"
-                d="M24 4H42V17.3333V30.6667H24V44H6V30.6667V17.3333H24V4Z"
-                fill="currentColor"
-                fillRule="evenodd"
-              />
-            </svg>
-          </div>
-          <h2 className="text-xl font-extrabold leading-tight tracking-tight">IcePops</h2>
-        </Link>
-        <nav className="hidden lg:flex items-center gap-9">
-          <Link href="/" className="text-sm font-semibold hover:text-primary transition-colors">
-            Home
-          </Link>
-          <Link href="/products" className="text-sm font-semibold hover:text-primary transition-colors">
-            Products
-          </Link>
-          <a className="text-sm font-semibold hover:text-primary transition-colors" href="#">
-            About
-          </a>
-          {isAuthenticated && user?.role === 'ADMIN' && (
-            <Link href="/admin" className="text-sm font-semibold text-primary hover:text-primary/80 transition-colors">
-              Admin
-            </Link>
-          )}
-        </nav>
-      </div>
-      <div className="flex flex-1 justify-end gap-4 items-center">
-        <label className="hidden md:flex flex-col min-w-40 !h-10 max-w-64">
-          <div className="flex w-full flex-1 items-stretch rounded-full h-full">
-            <div className="text-[#886364] flex border-none bg-white dark:bg-[#332222] items-center justify-center pl-4 rounded-l-full">
-              <Search className="w-5 h-5" />
-            </div>
-            <Input
-              className="flex w-full min-w-0 flex-1 rounded-r-full text-[#181111] dark:text-white focus:outline-0 focus:ring-0 border-none bg-white dark:bg-[#332222] h-full placeholder:text-[#886364] px-4 pl-2 text-sm font-normal"
-              placeholder="Search flavors"
-            />
-          </div>
-        </label>
-        
-        <Link href="/cart">
-          <Button className="relative flex min-w-[48px] items-center justify-center rounded-full h-10 px-4 bg-primary text-white text-sm font-bold shadow-lg shadow-primary/20 hover:scale-105 transition-transform active:scale-95">
-            <ShoppingCart className="mr-2 h-5 w-5" />
-            <span className="truncate">Cart</span>
-            {cartItemCount > 0 && (
-              <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
-                {cartItemCount}
-              </span>
-            )}
-          </Button>
-        </Link>
-        
-        {isAuthenticated ? (
-          <div className="relative flex items-center gap-3">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleLogout}
-              disabled={isLoggingOut}
-              className="hidden sm:flex items-center gap-2 rounded-full border-primary/20 hover:bg-primary/10"
+    <header
+      className="sticky top-0 z-50 w-full"
+      style={{
+        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+        borderBottom: '1px solid rgb(220, 223, 230)',
+        backdropFilter: 'blur(12px)',
+      }}
+    >
+      <div className="max-w-6xl mx-auto px-4 md:px-6">
+        <div className="flex items-center justify-between h-16 gap-4">
+
+          {/* ── Logo ── */}
+          <Link href="/" className="flex items-center gap-2.5 shrink-0">
+            <div
+              className="flex items-center justify-center w-8 h-8"
+              style={{ borderRadius: '6px', backgroundColor: 'rgb(185, 28, 28)' }}
             >
-              <LogOut className="h-4 w-4" />
-              <span>{isLoggingOut ? "Logging out..." : "Logout"}</span>
-            </Button>
-            
-            <div className="relative">
-              <div
-                onClick={() => setShowUserMenu(!showUserMenu)}
-                className="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10 border-2 border-primary/20 cursor-pointer hover:border-primary transition-colors"
-                style={{
-                  backgroundImage:
-                    'url("https://lh3.googleusercontent.com/aida-public/AB6AXuA8B6qNggFZSQeQz9fKui41jH8xlB1ZfYBUaK1zqkW5wlAyNPA0vkcQ9odFlEvi6lnEBva-jmEO9rQqw4qmaqcUejjiuubW7y2VUCVgwC5fq4gTg2QErE5GdyCU-H-dFVmTUn1wO6rBftLGM4xi4BQzti02zyaYdje2n52GQmHhI0C4MGPdc5axpd3vABiVpStOyuiZMfDm55ZqM7jqxXM1GlmAqE4c79FxemdGnK7p2aRuPlZ4_h7bEzM6gZYvDjcWFEEhc5vWY4Y")',
-                }}
-              ></div>
-              
-              {showUserMenu && (
-                <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-[#332222] rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden z-50">
-                  <div className="p-3 border-b border-gray-200 dark:border-gray-700">
-                    <p className="font-semibold">{user?.name}</p>
-                    <p className="text-sm text-gray-600">{user?.email}</p>
-                  </div>
-                  <div className="py-2">
-                    <Link
-                      href="/orders"
-                      onClick={() => setShowUserMenu(false)}
-                      className="flex items-center gap-3 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                    >
-                      <Package className="w-4 h-4" />
-                      <span>My Orders</span>
-                    </Link>
-                    <Link
-                      href="/wishlist"
-                      onClick={() => setShowUserMenu(false)}
-                      className="flex items-center gap-3 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                    >
-                      <Heart className="w-4 h-4" />
-                      <span>Wishlist</span>
-                    </Link>
-                    <Link
-                      href="/addresses"
-                      onClick={() => setShowUserMenu(false)}
-                      className="flex items-center gap-3 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                    >
-                      <MapPin className="w-4 h-4" />
-                      <span>Addresses</span>
-                    </Link>
-                    <Link
-                      href="/profile"
-                      onClick={() => setShowUserMenu(false)}
-                      className="flex items-center gap-3 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                    >
-                      <User className="w-4 h-4" />
-                      <span>Profile</span>
-                    </Link>
-                  </div>
-                  <div className="border-t border-gray-200 dark:border-gray-700 p-2">
-                    <button
-                      onClick={() => {
-                        setShowUserMenu(false)
-                        handleLogout()
-                      }}
-                      disabled={isLoggingOut}
-                      className="flex items-center gap-3 px-4 py-2 w-full text-left hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 transition-colors rounded"
-                    >
-                      <LogOut className="w-4 h-4" />
-                      <span>{isLoggingOut ? "Logging out..." : "Logout"}</span>
-                    </button>
-                  </div>
-                </div>
-              )}
+              <svg fill="none" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" className="w-5 h-5">
+                <path
+                  clipRule="evenodd"
+                  d="M24 4H42V17.3333V30.6667H24V44H6V30.6667V17.3333H24V4Z"
+                  fill="white"
+                  fillRule="evenodd"
+                />
+              </svg>
             </div>
-          </div>
-        ) : (
-          <div className="flex items-center gap-3">
-            <Link href="/login">
-              <Button
-                variant="outline"
-                className="rounded-full border-primary/20 hover:bg-primary/10 font-semibold"
+            <span
+              className="text-lg font-extrabold tracking-tight"
+              style={{ color: 'rgb(15, 20, 35)' }}
+            >
+              IcePops
+            </span>
+          </Link>
+
+          {/* ── Desktop Nav ── */}
+          <nav className="hidden lg:flex items-center gap-6">
+            {navLinks.map(link => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className="text-sm font-semibold transition-colors"
+                style={{ color: 'rgb(75, 85, 99)' }}
+                onMouseEnter={e => (e.currentTarget.style.color = 'rgb(185, 28, 28)')}
+                onMouseLeave={e => (e.currentTarget.style.color = 'rgb(75, 85, 99)')}
               >
-                Login
-              </Button>
+                {link.label}
+              </Link>
+            ))}
+            {isAuthenticated && user?.role === 'ADMIN' && (
+              <Link
+                href="/admin"
+                className="text-sm font-bold transition-colors"
+                style={{ color: 'rgb(185, 28, 28)' }}
+                onMouseEnter={e => (e.currentTarget.style.color = 'rgb(153, 27, 27)')}
+                onMouseLeave={e => (e.currentTarget.style.color = 'rgb(185, 28, 28)')}
+              >
+                Admin
+              </Link>
+            )}
+          </nav>
+
+          {/* ── Right Section ── */}
+          <div className="flex items-center gap-2.5">
+
+            {/* Search (desktop) */}
+            <div
+              className="hidden md:flex items-center gap-2 h-9 px-3"
+              style={{
+                borderRadius: '6px',
+                border: '1px solid rgb(220, 223, 230)',
+                backgroundColor: 'rgb(248, 249, 251)',
+                minWidth: '180px',
+                maxWidth: '240px',
+              }}
+              onFocus={() => {}}
+            >
+              <Search className="w-3.5 h-3.5 shrink-0" style={{ color: 'rgb(150, 158, 175)' }} />
+              <input
+                type="text"
+                placeholder="Search flavors..."
+                value={searchValue}
+                onChange={e => setSearchValue(e.target.value)}
+                className="flex-1 text-sm bg-transparent outline-none"
+                style={{ color: 'rgb(15, 20, 35)' }}
+              />
+            </div>
+
+            {/* Cart */}
+            <Link href="/cart">
+              <button
+                className="relative flex items-center gap-1.5 h-9 px-3 text-sm font-bold transition-colors"
+                style={{
+                  borderRadius: '6px',
+                  backgroundColor: 'rgb(185, 28, 28)',
+                  color: 'rgb(255, 255, 255)',
+                  border: '1px solid rgb(185, 28, 28)',
+                }}
+                onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'rgb(153, 27, 27)')}
+                onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'rgb(185, 28, 28)')}
+              >
+                <ShoppingCart className="w-4 h-4 stroke-[2.5]" />
+                <span className="hidden sm:inline">Cart</span>
+                {cartItemCount > 0 && (
+                  <span
+                    className="absolute -top-1.5 -right-1.5 flex items-center justify-center w-4 h-4 text-xs font-extrabold"
+                    style={{
+                      borderRadius: '50%',
+                      backgroundColor: 'rgb(255, 255, 255)',
+                      color: 'rgb(185, 28, 28)',
+                      border: '1.5px solid rgb(185, 28, 28)',
+                      fontSize: '10px',
+                    }}
+                  >
+                    {cartItemCount > 9 ? '9+' : cartItemCount}
+                  </span>
+                )}
+              </button>
             </Link>
-            <Link href="/register">
-              <Button className="rounded-full bg-primary hover:bg-primary/90 text-white font-semibold shadow-lg shadow-primary/20">
-                Sign Up
-              </Button>
-            </Link>
+
+            {/* Auth */}
+            {isAuthenticated ? (
+              <div className="relative" ref={menuRef}>
+                <button
+                  onClick={() => setShowUserMenu(!showUserMenu)}
+                  className="flex items-center gap-2 h-9 px-2.5 transition-colors"
+                  style={{
+                    borderRadius: '6px',
+                    border: '1px solid rgb(220, 223, 230)',
+                    backgroundColor: showUserMenu ? 'rgb(248, 249, 251)' : 'rgb(255, 255, 255)',
+                  }}
+                  onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'rgb(248, 249, 251)')}
+                  onMouseLeave={e => {
+                    if (!showUserMenu) e.currentTarget.style.backgroundColor = 'rgb(255, 255, 255)'
+                  }}
+                >
+                  {/* Avatar */}
+                  <div
+                    className="flex items-center justify-center w-6 h-6 text-xs font-extrabold"
+                    style={{
+                      borderRadius: '4px',
+                      backgroundColor: 'rgb(254, 242, 242)',
+                      color: 'rgb(185, 28, 28)',
+                      border: '1px solid rgb(254, 202, 202)',
+                    }}
+                  >
+                    {user?.name?.charAt(0)?.toUpperCase() || 'U'}
+                  </div>
+                  <span
+                    className="hidden sm:inline text-sm font-bold max-w-[90px] truncate"
+                    style={{ color: 'rgb(15, 20, 35)' }}
+                  >
+                    {user?.name?.split(' ')[0] || 'Account'}
+                  </span>
+                  <ChevronDown
+                    className="w-3.5 h-3.5 transition-transform"
+                    style={{
+                      color: 'rgb(110, 118, 135)',
+                      transform: showUserMenu ? 'rotate(180deg)' : 'rotate(0deg)',
+                    }}
+                  />
+                </button>
+
+                {/* Dropdown */}
+                {showUserMenu && (
+                  <div
+                    className="absolute right-0 mt-1.5 w-56 overflow-hidden"
+                    style={{
+                      borderRadius: '6px',
+                      backgroundColor: 'rgb(255, 255, 255)',
+                      border: '1px solid rgb(220, 223, 230)',
+                      boxShadow: '0 8px 24px rgba(0,0,0,0.10)',
+                      zIndex: 100,
+                    }}
+                  >
+                    {/* User Info */}
+                    <div
+                      className="px-4 py-3"
+                      style={{ borderBottom: '1px solid rgb(240, 242, 245)', backgroundColor: 'rgb(248, 249, 251)' }}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <div
+                          className="flex items-center justify-center w-8 h-8 shrink-0 text-sm font-extrabold"
+                          style={{
+                            borderRadius: '6px',
+                            backgroundColor: 'rgb(254, 242, 242)',
+                            color: 'rgb(185, 28, 28)',
+                            border: '1px solid rgb(254, 202, 202)',
+                          }}
+                        >
+                          {user?.name?.charAt(0)?.toUpperCase() || 'U'}
+                        </div>
+                        <div className="min-w-0">
+                          <p
+                            className="text-sm font-bold truncate"
+                            style={{ color: 'rgb(15, 20, 35)' }}
+                          >
+                            {user?.name}
+                          </p>
+                          <p
+                            className="text-xs truncate"
+                            style={{ color: 'rgb(110, 118, 135)' }}
+                          >
+                            {user?.email}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Menu Items */}
+                    <div className="py-1">
+                      {menuItems.map(item => (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          onClick={() => setShowUserMenu(false)}
+                        >
+                          <div
+                            className="flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-colors"
+                            style={{ color: 'rgb(55, 65, 81)' }}
+                            onMouseEnter={e => {
+                              e.currentTarget.style.backgroundColor = 'rgb(248, 249, 251)'
+                              e.currentTarget.style.color = 'rgb(185, 28, 28)'
+                            }}
+                            onMouseLeave={e => {
+                              e.currentTarget.style.backgroundColor = 'transparent'
+                              e.currentTarget.style.color = 'rgb(55, 65, 81)'
+                            }}
+                          >
+                            <item.icon className="w-4 h-4 shrink-0" />
+                            <span className="text-sm font-semibold">{item.label}</span>
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+
+                    {/* Logout */}
+                    <div style={{ borderTop: '1px solid rgb(240, 242, 245)' }} className="p-1.5">
+                      <button
+                        onClick={handleLogout}
+                        disabled={isLoggingOut}
+                        className="flex items-center gap-3 px-3 py-2 w-full transition-colors disabled:opacity-50"
+                        style={{ borderRadius: '4px', color: 'rgb(185, 28, 28)' }}
+                        onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'rgb(254, 242, 242)')}
+                        onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+                      >
+                        <LogOut className="w-4 h-4 shrink-0" />
+                        <span className="text-sm font-bold">
+                          {isLoggingOut ? "Logging out..." : "Logout"}
+                        </span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <Link href="/login">
+                  <button
+                    className="h-9 px-4 text-sm font-bold transition-colors"
+                    style={{
+                      borderRadius: '6px',
+                      border: '1px solid rgb(220, 223, 230)',
+                      backgroundColor: 'rgb(255, 255, 255)',
+                      color: 'rgb(55, 65, 81)',
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.borderColor = 'rgb(185, 28, 28)'
+                      e.currentTarget.style.color = 'rgb(185, 28, 28)'
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.borderColor = 'rgb(220, 223, 230)'
+                      e.currentTarget.style.color = 'rgb(55, 65, 81)'
+                    }}
+                  >
+                    Login
+                  </button>
+                </Link>
+                <Link href="/register">
+                  <button
+                    className="h-9 px-4 text-sm font-bold transition-colors"
+                    style={{
+                      borderRadius: '6px',
+                      backgroundColor: 'rgb(185, 28, 28)',
+                      color: 'rgb(255, 255, 255)',
+                      border: '1px solid rgb(185, 28, 28)',
+                    }}
+                    onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'rgb(153, 27, 27)')}
+                    onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'rgb(185, 28, 28)')}
+                  >
+                    Sign Up
+                  </button>
+                </Link>
+              </div>
+            )}
+
+            {/* Mobile hamburger */}
+            <button
+              className="lg:hidden flex items-center justify-center w-9 h-9 transition-colors"
+              style={{
+                borderRadius: '6px',
+                border: '1px solid rgb(220, 223, 230)',
+                backgroundColor: 'rgb(255, 255, 255)',
+                color: 'rgb(75, 85, 99)',
+              }}
+              onClick={() => setShowMobileMenu(!showMobileMenu)}
+              onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'rgb(248, 249, 251)')}
+              onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'rgb(255, 255, 255)')}
+            >
+              {showMobileMenu
+                ? <X className="w-4 h-4 stroke-[2.5]" />
+                : <Menu className="w-4 h-4 stroke-[2.5]" />
+              }
+            </button>
+          </div>
+        </div>
+
+        {/* ── Mobile Menu ── */}
+        {showMobileMenu && (
+          <div
+            className="lg:hidden py-3 space-y-1"
+            style={{ borderTop: '1px solid rgb(220, 223, 230)' }}
+          >
+            {/* Mobile Search */}
+            <div
+              className="flex items-center gap-2 h-9 px-3 mx-0 mb-2"
+              style={{
+                borderRadius: '6px',
+                border: '1px solid rgb(220, 223, 230)',
+                backgroundColor: 'rgb(248, 249, 251)',
+              }}
+            >
+              <Search className="w-3.5 h-3.5 shrink-0" style={{ color: 'rgb(150, 158, 175)' }} />
+              <input
+                type="text"
+                placeholder="Search flavors..."
+                className="flex-1 text-sm bg-transparent outline-none"
+                style={{ color: 'rgb(15, 20, 35)' }}
+              />
+            </div>
+
+            {navLinks.map(link => (
+              <Link
+                key={link.href}
+                href={link.href}
+                onClick={() => setShowMobileMenu(false)}
+              >
+                <div
+                  className="flex items-center px-3 py-2.5 text-sm font-semibold transition-colors cursor-pointer"
+                  style={{ borderRadius: '4px', color: 'rgb(55, 65, 81)' }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.backgroundColor = 'rgb(254, 242, 242)'
+                    e.currentTarget.style.color = 'rgb(185, 28, 28)'
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.backgroundColor = 'transparent'
+                    e.currentTarget.style.color = 'rgb(55, 65, 81)'
+                  }}
+                >
+                  {link.label}
+                </div>
+              </Link>
+            ))}
           </div>
         )}
       </div>

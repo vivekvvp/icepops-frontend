@@ -4,25 +4,20 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Minus, Plus, Trash2, ShoppingBag, Tag, Home } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card } from '@/components/ui/card';
 import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from '@/components/ui/breadcrumb';
-import { 
+  Minus, Plus, Trash2, ShoppingBag,
+  Tag, ChevronRight, Truck, Shield,
+  RotateCcw, ArrowRight, X,
+} from 'lucide-react';
+import Header from '@/components/Header';
+import Footer from '@/components/Footer';
+import {
   useGetCartQuery,
   useUpdateCartItemMutation,
   useRemoveFromCartMutation,
   useApplyCouponMutation,
   useRemoveCouponMutation,
-  useValidateCouponMutation
+  useValidateCouponMutation,
 } from '@/lib/services/api';
 import { UserProtectedRoute } from '@/lib/ProtectedRoute';
 import { useAppSelector } from '@/lib/store/hooks';
@@ -38,7 +33,7 @@ function CartPage() {
   const [applyCoupon] = useApplyCouponMutation();
   const [removeCoupon] = useRemoveCouponMutation();
   const [validateCoupon] = useValidateCouponMutation();
-  
+
   const [couponInput, setCouponInput] = useState('');
   const [loadingCoupon, setLoadingCoupon] = useState(false);
 
@@ -48,10 +43,11 @@ function CartPage() {
   const discount = cart?.discount || 0;
   const total = cart?.total || 0;
   const couponCode = cart?.couponCode;
+  const shippingFree = subtotal > 500;
+  const shippingCost = shippingFree ? 0 : 50;
 
   const handleUpdateQuantity = async (productId: string, newQuantity: number) => {
     if (newQuantity < 1) return;
-    
     try {
       await updateCartItem({ productId, quantity: newQuantity }).unwrap();
       toast.success('Cart updated');
@@ -71,7 +67,6 @@ function CartPage() {
 
   const handleApplyCoupon = async () => {
     if (!couponInput.trim()) return;
-    
     try {
       setLoadingCoupon(true);
       const validationResult = await validateCoupon({ code: couponInput, cartTotal: subtotal }).unwrap();
@@ -98,273 +93,613 @@ function CartPage() {
     }
   };
 
+  /* ── Loading ── */
   if (isLoading) {
     return (
-      <div className="container mx-auto px-4 py-16">
-        <div className="flex items-center justify-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      <div className="relative flex min-h-screen w-full flex-col" style={{ backgroundColor: 'rgb(246, 247, 249)' }}>
+        <Header />
+        <div className="flex-1 flex items-center justify-center py-24">
+          <div className="flex flex-col items-center gap-4">
+            <div
+              className="w-10 h-10 rounded-full border-2 animate-spin"
+              style={{ borderColor: 'rgb(185, 28, 28)', borderTopColor: 'transparent' }}
+            />
+            <p className="text-sm font-medium" style={{ color: 'rgb(110, 118, 135)' }}>
+              Loading your cart...
+            </p>
+          </div>
         </div>
+        <Footer />
       </div>
     );
   }
 
+  /* ── Empty Cart ── */
   if (items.length === 0) {
     return (
-      <div className="container mx-auto px-4 py-16">
-        <Card className="p-12 text-center">
-          <ShoppingBag className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-          <h2 className="text-2xl font-bold mb-2">Your cart is empty</h2>
-          <p className="text-gray-600 mb-6">Add some products to get started</p>
-          <Link href="/products">
-            <Button>Continue Shopping</Button>
-          </Link>
-        </Card>
+      <div className="relative flex min-h-screen w-full flex-col" style={{ backgroundColor: 'rgb(246, 247, 249)' }}>
+        <Header />
+        <div className="flex-1 flex items-center justify-center py-24 px-4">
+          <div
+            className="flex flex-col items-center text-center p-10"
+            style={{
+              backgroundColor: 'rgb(255, 255, 255)',
+              border: '1px solid rgb(220, 223, 230)',
+              borderRadius: '6px',
+              maxWidth: '420px',
+              width: '100%',
+            }}
+          >
+            <div
+              className="w-16 h-16 flex items-center justify-center mb-4"
+              style={{
+                borderRadius: '8px',
+                backgroundColor: 'rgb(254, 242, 242)',
+                border: '1px solid rgb(254, 202, 202)',
+              }}
+            >
+              <ShoppingBag className="w-7 h-7" style={{ color: 'rgb(185, 28, 28)' }} />
+            </div>
+            <h2 className="text-lg font-bold mb-1" style={{ color: 'rgb(15, 20, 35)' }}>
+              Your cart is empty
+            </h2>
+            <p className="text-sm mb-6" style={{ color: 'rgb(110, 118, 135)' }}>
+              Looks like you haven't added anything yet. Start shopping!
+            </p>
+            <Link href="/products">
+              <button
+                className="flex items-center gap-2 text-sm font-bold px-6 py-2.5 transition-colors"
+                style={{ borderRadius: '6px', backgroundColor: 'rgb(185, 28, 28)', color: 'rgb(255, 255, 255)' }}
+                onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'rgb(153, 27, 27)')}
+                onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'rgb(185, 28, 28)')}
+              >
+                Browse Products
+                <ArrowRight className="w-4 h-4 stroke-[2.5]" />
+              </button>
+            </Link>
+          </div>
+        </div>
+        <Footer />
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      {/* Breadcrumb */}
-      <Breadcrumb className="mb-6">
-        <BreadcrumbList>
-          <BreadcrumbItem>
-            <BreadcrumbLink asChild>
-              <Link href="/">
-                <Home className="h-4 w-4" />
-              </Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbPage>Shopping Cart</BreadcrumbPage>
-          </BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
+    <div className="relative flex min-h-screen w-full flex-col" style={{ backgroundColor: 'rgb(246, 247, 249)' }}>
+      <Header />
 
-      <h1 className="text-3xl font-bold mb-8">Shopping Cart</h1>
-      
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Cart Items */}
-        <div className="lg:col-span-2 space-y-4">
-          {items.map((item: any) => {
-            // Safety check for missing product - cart stores productId
-            const product = item.productId || item.product;
-            if (!product || !product._id) {
-              return null;
-            }
-            
-            const itemTotal = (item.price || product.price || 0) * item.quantity;
-            const compareTotal = product.comparePrice ? product.comparePrice * item.quantity : null;
-            const savings = compareTotal ? compareTotal - itemTotal : 0;
-            
-            return (
-              <Card key={product._id} className="p-6 hover:shadow-md transition-shadow">
-                <div className="flex gap-6">
-                  <Link href={`/products/${product._id}`} className="relative w-32 h-32 flex-shrink-0 rounded-lg overflow-hidden border border-gray-200">
-                    <Image
-                      src={item.image || product.images?.[0] || '/placeholder.png'}
-                      alt={item.name || product.name || 'Product'}
-                      fill
-                      className="object-cover hover:scale-105 transition-transform duration-300"
-                    />
-                  </Link>
-                  
-                  <div className="flex-1 min-w-0">
-                    <div className="flex justify-between items-start mb-2">
-                      <div className="flex-1">
-                        <Link href={`/products/${product._id}`}>
-                          <h3 className="font-semibold text-lg hover:text-primary transition-colors line-clamp-2">
-                            {item.name || product.name}
-                          </h3>
+      <main className="flex-1">
+        <section className="px-4 md:px-6 py-8">
+          <div className="max-w-6xl mx-auto space-y-6">
+
+            {/* ── Breadcrumb ── */}
+            <div className="flex items-center gap-1.5 text-xs" style={{ color: 'rgb(150, 158, 175)' }}>
+              <Link href="/">
+                <span
+                  className="transition-colors cursor-pointer"
+                  onMouseEnter={e => (e.currentTarget.style.color = 'rgb(185, 28, 28)')}
+                  onMouseLeave={e => (e.currentTarget.style.color = 'rgb(150, 158, 175)')}
+                >Home</span>
+              </Link>
+              <ChevronRight className="w-3 h-3" />
+              <span className="font-semibold" style={{ color: 'rgb(55, 65, 81)' }}>Shopping Cart</span>
+            </div>
+
+            {/* ── Page Title ── */}
+            <div
+              className="flex items-center justify-between pb-5"
+              style={{ borderBottom: '1px solid rgb(220, 223, 230)' }}
+            >
+              <div>
+                <h1 className="text-2xl font-extrabold tracking-tight" style={{ color: 'rgb(15, 20, 35)' }}>
+                  Shopping Cart
+                </h1>
+                <p className="text-sm mt-0.5" style={{ color: 'rgb(110, 118, 135)' }}>
+                  {items.length} {items.length === 1 ? 'item' : 'items'} in your cart
+                </p>
+              </div>
+              <Link href="/products">
+                <button
+                  className="hidden md:flex items-center gap-1.5 text-sm font-bold transition-colors"
+                  style={{ color: 'rgb(185, 28, 28)' }}
+                  onMouseEnter={e => (e.currentTarget.style.color = 'rgb(153, 27, 27)')}
+                  onMouseLeave={e => (e.currentTarget.style.color = 'rgb(185, 28, 28)')}
+                >
+                  Continue Shopping
+                  <ArrowRight className="w-4 h-4 stroke-[2.5]" />
+                </button>
+              </Link>
+            </div>
+
+            {/* ── Free Shipping Bar ── */}
+            {!shippingFree && (
+              <div
+                className="px-4 py-3 flex items-center gap-3"
+                style={{
+                  borderRadius: '6px',
+                  backgroundColor: 'rgb(239, 246, 255)',
+                  border: '1px solid rgb(219, 234, 254)',
+                }}
+              >
+                <Truck className="w-4 h-4 shrink-0" style={{ color: 'rgb(29, 78, 216)' }} />
+                <p className="text-sm" style={{ color: 'rgb(29, 78, 216)' }}>
+                  Add
+                  <span className="font-bold">₹{(500 - subtotal).toFixed(2)}</span>
+                  {' '}more to get <span className="font-bold">FREE shipping!</span>
+                </p>
+              </div>
+            )}
+            {shippingFree && (
+              <div
+                className="px-4 py-3 flex items-center gap-3"
+                style={{
+                  borderRadius: '6px',
+                  backgroundColor: 'rgb(240, 253, 244)',
+                  border: '1px solid rgb(187, 247, 208)',
+                }}
+              >
+                <Truck className="w-4 h-4 shrink-0" style={{ color: 'rgb(21, 91, 48)' }} />
+                <p className="text-sm font-semibold" style={{ color: 'rgb(21, 91, 48)' }}>
+                  🎉 You've unlocked FREE shipping!
+                </p>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+              {/* ── Cart Items ── */}
+              <div className="lg:col-span-2 space-y-3">
+                {items.map((item: any) => {
+                  const product = item.productId || item.product;
+                  if (!product || !product._id) return null;
+
+                  const itemTotal = (item.price || product.price || 0) * item.quantity;
+                  const compareTotal = product.comparePrice
+                    ? product.comparePrice * item.quantity
+                    : null;
+                  const savings = compareTotal ? compareTotal - itemTotal : 0;
+                  const stockLevel =
+                    product.stock > 10 ? 'in' : product.stock > 0 ? 'low' : 'out';
+
+                  return (
+                    <div
+                      key={product._id}
+                      className="overflow-hidden transition-shadow"
+                      style={{
+                        backgroundColor: 'rgb(255, 255, 255)',
+                        border: '1px solid rgb(220, 223, 230)',
+                        borderRadius: '6px',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+                      }}
+                    >
+                      <div className="p-4 flex gap-4">
+
+                        {/* Image */}
+                        <Link
+                          href={`/products/${product._id}`}
+                          className="relative shrink-0 overflow-hidden"
+                          style={{
+                            width: '96px',
+                            height: '96px',
+                            borderRadius: '4px',
+                            border: '1px solid rgb(220, 223, 230)',
+                            backgroundColor: 'rgb(243, 244, 246)',
+                          }}
+                        >
+                          <Image
+                            src={item.image || product.images?.[0] || '/placeholder.png'}
+                            alt={item.name || product.name}
+                            fill
+                            className="object-cover hover:scale-105 transition-transform duration-300"
+                          />
                         </Link>
-                        
-                        {product.description && (
-                          <p className="text-sm text-gray-600 mt-1 line-clamp-1">
-                            {product.description}
-                          </p>
-                        )}
-                      </div>
-                      
-                      <button
-                        onClick={() => handleRemoveItem(product._id)}
-                        className="ml-4 p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-full transition-colors"
-                        title="Remove item"
-                      >
-                        <Trash2 className="w-5 h-5" />
-                      </button>
-                    </div>
-                    
-                    {item.variant && (
-                      <div className="flex gap-3 text-sm text-gray-600 mb-3">
-                        {item.variant.size && (
-                          <span className="bg-gray-100 px-2 py-1 rounded">Size: {item.variant.size}</span>
-                        )}
-                        {item.variant.color && (
-                          <span className="bg-gray-100 px-2 py-1 rounded">Color: {item.variant.color}</span>
-                        )}
-                      </div>
-                    )}
-                    
-                    {product.stock !== undefined && (
-                      <p className={`text-sm mb-3 ${product.stock > 10 ? 'text-green-600' : product.stock > 0 ? 'text-orange-600' : 'text-red-600'}`}>
-                        {product.stock > 10 ? 'In Stock' : product.stock > 0 ? `Only ${product.stock} left!` : 'Out of Stock'}
-                      </p>
-                    )}
-                    
-                    <div className="flex items-center justify-between mt-4">
-                      <div className="flex items-center border rounded-lg shadow-sm">
-                        <button
-                          onClick={() => handleUpdateQuantity(product._id, item.quantity - 1)}
-                          className="p-2 hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                          disabled={item.quantity <= 1}
-                        >
-                          <Minus className="w-4 h-4" />
-                        </button>
-                        <span className="px-6 font-medium min-w-[60px] text-center">{item.quantity}</span>
-                        <button
-                          onClick={() => handleUpdateQuantity(product._id, item.quantity + 1)}
-                          className="p-2 hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                          disabled={item.quantity >= (product.stock || 0)}
-                        >
-                          <Plus className="w-4 h-4" />
-                        </button>
-                      </div>
-                      
-                      <div className="text-right">
-                        <p className="text-xl font-bold text-primary">₹{itemTotal.toFixed(2)}</p>
-                        {compareTotal && (
-                          <div className="flex items-center gap-2 justify-end">
-                            <p className="text-sm text-gray-500 line-through">
-                              ₹{compareTotal.toFixed(2)}
-                            </p>
-                            {savings > 0 && (
-                              <p className="text-sm text-green-600 font-medium">
-                                Save ₹{savings.toFixed(2)}
-                              </p>
+
+                        {/* Info */}
+                        <div className="flex-1 min-w-0 flex flex-col gap-2">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex-1 min-w-0">
+                              <Link href={`/products/${product._id}`}>
+                                <h3
+                                  className="font-bold text-sm line-clamp-1 transition-colors"
+                                  style={{ color: 'rgb(15, 20, 35)' }}
+                                  onMouseEnter={e => (e.currentTarget.style.color = 'rgb(185, 28, 28)')}
+                                  onMouseLeave={e => (e.currentTarget.style.color = 'rgb(15, 20, 35)')}
+                                >
+                                  {item.name || product.name}
+                                </h3>
+                              </Link>
+
+                              {product.description && (
+                                <p
+                                  className="text-xs mt-0.5 line-clamp-1"
+                                  style={{ color: 'rgb(110, 118, 135)' }}
+                                >
+                                  {product.description}
+                                </p>
+                              )}
+                            </div>
+
+                            {/* Remove */}
+                            <button
+                              onClick={() => handleRemoveItem(product._id)}
+                              className="shrink-0 p-1.5 transition-colors"
+                              style={{
+                                borderRadius: '4px',
+                                color: 'rgb(150, 158, 175)',
+                                backgroundColor: 'transparent',
+                              }}
+                              onMouseEnter={e => {
+                                e.currentTarget.style.backgroundColor = 'rgb(254, 242, 242)'
+                                e.currentTarget.style.color = 'rgb(185, 28, 28)'
+                              }}
+                              onMouseLeave={e => {
+                                e.currentTarget.style.backgroundColor = 'transparent'
+                                e.currentTarget.style.color = 'rgb(150, 158, 175)'
+                              }}
+                              title="Remove item"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+
+                          {/* Variant tags */}
+                          {item.variant && (
+                            <div className="flex gap-2">
+                              {item.variant.size && (
+                                <span
+                                  className="text-xs font-semibold px-2 py-0.5"
+                                  style={{
+                                    borderRadius: '4px',
+                                    backgroundColor: 'rgb(248, 249, 251)',
+                                    border: '1px solid rgb(220, 223, 230)',
+                                    color: 'rgb(75, 85, 99)',
+                                  }}
+                                >
+                                  Size: {item.variant.size}
+                                </span>
+                              )}
+                              {item.variant.color && (
+                                <span
+                                  className="text-xs font-semibold px-2 py-0.5"
+                                  style={{
+                                    borderRadius: '4px',
+                                    backgroundColor: 'rgb(248, 249, 251)',
+                                    border: '1px solid rgb(220, 223, 230)',
+                                    color: 'rgb(75, 85, 99)',
+                                  }}
+                                >
+                                  Color: {item.variant.color}
+                                </span>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Stock badge */}
+                          <div>
+                            {stockLevel === 'in' && (
+                              <span className="text-xs font-semibold" style={{ color: 'rgb(21, 91, 48)' }}>
+                                ✓ In Stock
+                              </span>
+                            )}
+                            {stockLevel === 'low' && (
+                              <span className="text-xs font-semibold" style={{ color: 'rgb(161, 72, 10)' }}>
+                                ⚠ Only {product.stock} left!
+                              </span>
+                            )}
+                            {stockLevel === 'out' && (
+                              <span className="text-xs font-semibold" style={{ color: 'rgb(185, 28, 28)' }}>
+                                ✗ Out of Stock
+                              </span>
                             )}
                           </div>
-                        )}
-                        <p className="text-xs text-gray-500 mt-1">
-                          ₹{(item.price || product.price)?.toFixed(2)} × {item.quantity}
-                        </p>
+
+                          {/* Quantity + Price Row */}
+                          <div className="flex items-center justify-between mt-1">
+
+                            {/* Quantity */}
+                            <div
+                              className="flex items-center overflow-hidden"
+                              style={{
+                                border: '1px solid rgb(220, 223, 230)',
+                                borderRadius: '4px',
+                              }}
+                            >
+                              <button
+                                onClick={() => handleUpdateQuantity(product._id, item.quantity - 1)}
+                                disabled={item.quantity <= 1}
+                                className="px-2.5 py-1.5 text-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                                style={{ backgroundColor: 'rgb(248, 249, 251)', color: 'rgb(55, 65, 81)' }}
+                                onMouseEnter={e => { if (item.quantity > 1) e.currentTarget.style.backgroundColor = 'rgb(240, 242, 245)' }}
+                                onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'rgb(248, 249, 251)')}
+                              >
+                                <Minus className="w-3 h-3 stroke-[2.5]" />
+                              </button>
+                              <span
+                                className="px-4 py-1.5 text-sm font-bold text-center"
+                                style={{
+                                  borderLeft: '1px solid rgb(220, 223, 230)',
+                                  borderRight: '1px solid rgb(220, 223, 230)',
+                                  color: 'rgb(15, 20, 35)',
+                                  minWidth: '44px',
+                                }}
+                              >
+                                {item.quantity}
+                              </span>
+                              <button
+                                onClick={() => handleUpdateQuantity(product._id, item.quantity + 1)}
+                                disabled={item.quantity >= (product.stock || 0)}
+                                className="px-2.5 py-1.5 text-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                                style={{ backgroundColor: 'rgb(248, 249, 251)', color: 'rgb(55, 65, 81)' }}
+                                onMouseEnter={e => { if (item.quantity < product.stock) e.currentTarget.style.backgroundColor = 'rgb(240, 242, 245)' }}
+                                onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'rgb(248, 249, 251)')}
+                              >
+                                <Plus className="w-3 h-3 stroke-[2.5]" />
+                              </button>
+                            </div>
+
+                            {/* Price */}
+                            <div className="text-right">
+                              <p className="text-base font-extrabold" style={{ color: 'rgb(185, 28, 28)' }}>
+                                ₹{itemTotal.toFixed(2)}
+                              </p>
+                              {compareTotal && (
+                                <p className="text-xs line-through" style={{ color: 'rgb(150, 158, 175)' }}>
+                                  ₹{compareTotal.toFixed(2)}
+                                </p>
+                              )}
+                              <p className="text-xs mt-0.5" style={{ color: 'rgb(150, 158, 175)' }}>
+                                ₹{(item.price || product.price)?.toFixed(2)} × {item.quantity}
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Savings badge */}
+                          {savings > 0 && (
+                            <span
+                              className="self-start text-xs font-bold px-2 py-0.5"
+                              style={{
+                                borderRadius: '4px',
+                                backgroundColor: 'rgb(240, 253, 244)',
+                                color: 'rgb(21, 91, 48)',
+                                border: '1px solid rgb(187, 247, 208)',
+                              }}
+                            >
+                              You save ₹{savings.toFixed(2)}
+                            </span>
+                          )}
+                        </div>
                       </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* ── Order Summary ── */}
+              <div className="lg:col-span-1">
+                <div
+                  className="sticky top-24 overflow-hidden"
+                  style={{
+                    backgroundColor: 'rgb(255, 255, 255)',
+                    border: '1px solid rgb(220, 223, 230)',
+                    borderRadius: '6px',
+                  }}
+                >
+                  {/* Header */}
+                  <div
+                    className="px-5 py-4"
+                    style={{
+                      borderBottom: '1px solid rgb(240, 242, 245)',
+                      backgroundColor: 'rgb(248, 249, 251)',
+                    }}
+                  >
+                    <h2 className="text-sm font-bold" style={{ color: 'rgb(15, 20, 35)' }}>
+                      Order Summary
+                    </h2>
+                    <p className="text-xs mt-0.5" style={{ color: 'rgb(110, 118, 135)' }}>
+                      {items.length} {items.length === 1 ? 'item' : 'items'}
+                    </p>
+                  </div>
+
+                  <div className="p-5 space-y-5">
+
+                    {/* Coupon */}
+                    <div
+                      className="p-4 space-y-3"
+                      style={{
+                        borderRadius: '4px',
+                        backgroundColor: 'rgb(248, 249, 251)',
+                        border: '1px solid rgb(240, 242, 245)',
+                      }}
+                    >
+                      <p className="text-xs font-bold uppercase tracking-wider" style={{ color: 'rgb(150, 158, 175)' }}>
+                        Coupon Code
+                      </p>
+
+                      {couponCode ? (
+                        <div
+                          className="flex items-center justify-between px-3 py-2"
+                          style={{
+                            borderRadius: '4px',
+                            backgroundColor: 'rgb(240, 253, 244)',
+                            border: '1px solid rgb(187, 247, 208)',
+                          }}
+                        >
+                          <div className="flex items-center gap-2">
+                            <Tag className="w-3.5 h-3.5" style={{ color: 'rgb(21, 91, 48)' }} />
+                            <span className="text-xs font-bold" style={{ color: 'rgb(21, 91, 48)' }}>
+                              {couponCode}
+                            </span>
+                          </div>
+                          <button
+                            onClick={handleRemoveCoupon}
+                            className="p-0.5 transition-colors"
+                            style={{ color: 'rgb(21, 91, 48)', borderRadius: '3px' }}
+                            onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'rgb(187, 247, 208)')}
+                            onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex gap-2">
+                          <input
+                            placeholder="Enter code"
+                            value={couponInput}
+                            onChange={e => setCouponInput(e.target.value.toUpperCase())}
+                            className="flex-1 text-sm outline-none px-3 py-2 transition-colors"
+                            style={{
+                              borderRadius: '4px',
+                              border: '1px solid rgb(220, 223, 230)',
+                              backgroundColor: 'rgb(255, 255, 255)',
+                              color: 'rgb(15, 20, 35)',
+                            }}
+                            onFocus={e => (e.currentTarget.style.borderColor = 'rgb(100, 108, 125)')}
+                            onBlur={e => (e.currentTarget.style.borderColor = 'rgb(220, 223, 230)')}
+                            onKeyDown={e => e.key === 'Enter' && handleApplyCoupon()}
+                          />
+                          <button
+                            onClick={handleApplyCoupon}
+                            disabled={loadingCoupon || !couponInput.trim()}
+                            className="text-xs font-bold px-3 py-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            style={{
+                              borderRadius: '4px',
+                              backgroundColor: 'rgb(185, 28, 28)',
+                              color: 'rgb(255, 255, 255)',
+                            }}
+                            onMouseEnter={e => { if (!loadingCoupon && couponInput.trim()) e.currentTarget.style.backgroundColor = 'rgb(153, 27, 27)' }}
+                            onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'rgb(185, 28, 28)')}
+                          >
+                            {loadingCoupon ? '...' : 'Apply'}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* ── Price Breakdown ── */}
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm" style={{ color: 'rgb(75, 85, 99)' }}>
+                          Subtotal ({items.length} {items.length === 1 ? 'item' : 'items'})
+                        </span>
+                        <span className="text-sm font-semibold" style={{ color: 'rgb(15, 20, 35)' }}>
+                          ₹{subtotal.toFixed(2)}
+                        </span>
+                      </div>
+
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm" style={{ color: 'rgb(75, 85, 99)' }}>Shipping</span>
+                        <span
+                          className="text-sm font-semibold"
+                          style={{ color: shippingFree ? 'rgb(21, 91, 48)' : 'rgb(15, 20, 35)' }}
+                        >
+                          {shippingFree ? 'FREE' : `₹${shippingCost.toFixed(2)}`}
+                        </span>
+                      </div>
+
+                      {discount > 0 && (
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm" style={{ color: 'rgb(75, 85, 99)' }}>Discount</span>
+                          <span className="text-sm font-semibold" style={{ color: 'rgb(21, 91, 48)' }}>
+                            -₹{discount.toFixed(2)}
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Divider */}
+                      <div style={{ height: '1px', backgroundColor: 'rgb(240, 242, 245)' }} />
+
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-bold" style={{ color: 'rgb(15, 20, 35)' }}>Total</span>
+                        <span className="text-xl font-extrabold" style={{ color: 'rgb(185, 28, 28)' }}>
+                          ₹{(total + shippingCost).toFixed(2)}
+                        </span>
+                      </div>
+
+                      {discount > 0 && (
+                        <div
+                          className="flex items-center justify-center gap-1.5 py-2"
+                          style={{
+                            borderRadius: '4px',
+                            backgroundColor: 'rgb(240, 253, 244)',
+                            border: '1px solid rgb(187, 247, 208)',
+                          }}
+                        >
+                          <span className="text-xs font-bold" style={{ color: 'rgb(21, 91, 48)' }}>
+                            🎉 You're saving ₹{discount.toFixed(2)} on this order!
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* ── CTA Buttons ── */}
+                    <div className="space-y-2.5">
+                      <button
+                        onClick={() => router.push('/checkout')}
+                        className="w-full flex items-center justify-center gap-2 text-sm font-bold py-3 transition-colors"
+                        style={{
+                          borderRadius: '6px',
+                          backgroundColor: 'rgb(185, 28, 28)',
+                          color: 'rgb(255, 255, 255)',
+                        }}
+                        onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'rgb(153, 27, 27)')}
+                        onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'rgb(185, 28, 28)')}
+                      >
+                        Proceed to Checkout
+                        <ArrowRight className="w-4 h-4 stroke-[2.5]" />
+                      </button>
+
+                      <Link href="/products" className="block">
+                        <button
+                          className="w-full text-sm font-bold py-2.5 transition-colors"
+                          style={{
+                            borderRadius: '6px',
+                            border: '1px solid rgb(220, 223, 230)',
+                            backgroundColor: 'rgb(255, 255, 255)',
+                            color: 'rgb(75, 85, 99)',
+                          }}
+                          onMouseEnter={e => {
+                            e.currentTarget.style.backgroundColor = 'rgb(248, 249, 251)'
+                            e.currentTarget.style.borderColor = 'rgb(185, 28, 28)'
+                            e.currentTarget.style.color = 'rgb(185, 28, 28)'
+                          }}
+                          onMouseLeave={e => {
+                            e.currentTarget.style.backgroundColor = 'rgb(255, 255, 255)'
+                            e.currentTarget.style.borderColor = 'rgb(220, 223, 230)'
+                            e.currentTarget.style.color = 'rgb(75, 85, 99)'
+                          }}
+                        >
+                          Continue Shopping
+                        </button>
+                      </Link>
+                    </div>
+
+                    {/* ── Trust Badges ── */}
+                    <div
+                      style={{ height: '1px', backgroundColor: 'rgb(240, 242, 245)' }}
+                    />
+                    <div className="grid grid-cols-3 gap-2">
+                      { [
+                        { icon: Shield, label: 'Secure Checkout' },
+                        { icon: RotateCcw, label: 'Easy Returns' },
+                        { icon: Truck, label: 'Fast Delivery' },
+                      ].map(({ icon: Icon, label }) => (
+                        <div key={label} className="flex flex-col items-center gap-1 text-center">
+                          <Icon className="w-4 h-4" style={{ color: 'rgb(185, 28, 28)', strokeWidth: 2 }} />
+                          <span className="text-xs font-semibold" style={{ color: 'rgb(110, 118, 135)' }}>
+                            {label}
+                          </span>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 </div>
-              </Card>
-            );
-          })}
-        </div>
-
-        {/* Order Summary */}
-        <div className="lg:col-span-1">
-          <Card className="p-6 sticky top-24">
-            <h2 className="text-xl font-bold mb-6">Order Summary</h2>
-            
-            {/* Coupon Input */}
-            <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
-              <label className="text-sm font-medium text-gray-700 mb-2 block">
-                Have a coupon code?
-              </label>
-              <div className="flex gap-2">
-                <Input
-                  placeholder="Enter code"
-                  value={couponInput}
-                  onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
-                  disabled={!!couponCode}
-                  className="bg-white"
-                />
-                {couponCode ? (
-                  <Button variant="outline" onClick={handleRemoveCoupon} className="whitespace-nowrap">
-                    Remove
-                  </Button>
-                ) : (
-                  <Button onClick={handleApplyCoupon} disabled={loadingCoupon} className="whitespace-nowrap">
-                    {loadingCoupon ? 'Applying...' : 'Apply'}
-                  </Button>
-                )}
-              </div>
-              
-              {couponCode && (
-                <div className="mt-3 flex items-center gap-2 text-green-600 text-sm bg-green-50 p-2 rounded">
-                  <Tag className="w-4 h-4" />
-                  <span className="font-medium">Coupon &quot;{couponCode}&quot; applied successfully!</span>
-                </div>
-              )}
-            </div>
-
-            {/* Price Breakdown */}
-            <div className="space-y-3 mb-6">
-              <div className="flex justify-between text-gray-700">
-                <span>Subtotal ({items.length} {items.length === 1 ? 'item' : 'items'})</span>
-                <span className="font-medium">₹{subtotal.toFixed(2)}</span>
-              </div>
-              
-              <div className="flex justify-between text-gray-700">
-                <span>Shipping</span>
-                <span className="font-medium text-green-600">
-                  {subtotal > 500 ? 'FREE' : '₹50.00'}
-                </span>
-              </div>
-              
-              {subtotal <= 500 && (
-                <div className="text-xs text-gray-600 bg-blue-50 p-2 rounded">
-                  Add items worth ₹{(500 - subtotal).toFixed(2)} more to get FREE shipping!
-                </div>
-              )}
-              
-              {discount > 0 && (
-                <div className="flex justify-between text-green-600">
-                  <span className="font-medium">Discount</span>
-                  <span className="font-medium">-₹{discount.toFixed(2)}</span>
-                </div>
-              )}
-              
-              <div className="border-t pt-4 mt-4">
-                <div className="flex justify-between items-center">
-                  <span className="text-lg font-bold">Total</span>
-                  <div className="text-right">
-                    <span className="text-2xl font-bold text-primary">₹{total.toFixed(2)}</span>
-                    {discount > 0 && (
-                      <p className="text-xs text-gray-500">You saved ₹{discount.toFixed(2)}</p>
-                    )}
-                  </div>
-                </div>
               </div>
             </div>
+          </div>
+        </section>
+      </main>
 
-            <Button 
-              className="w-full mb-3" 
-              size="lg"
-              onClick={() => router.push('/checkout')}
-            >
-              Proceed to Checkout
-            </Button>
-            
-            <Link href="/products">
-              <Button variant="outline" className="w-full">
-                Continue Shopping
-              </Button>
-            </Link>
-            
-            <div className="mt-6 pt-6 border-t text-xs text-gray-600 space-y-2">
-              <div className="flex items-center gap-2">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-                <span>Secure checkout</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-                <span>Easy returns within 7 days</span>
-              </div>
-            </div>
-          </Card>
-        </div>
-      </div>
+      <Footer />
     </div>
   );
 }

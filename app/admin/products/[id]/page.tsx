@@ -4,17 +4,18 @@ import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Card } from "@/components/ui/card"
-import { useGetProductByIdQuery, useUpdateProductMutation } from "@/lib/services/api"
+import { useGetProductByIdQuery, useUpdateProductMutation, useGetAllCategoriesQuery } from "@/lib/services/api"
 import ImageUploader from "@/components/ImageUploader"
+import { toast } from "sonner"
 
 export default function EditProductPage({ params }: { params: { id: string } }) {
   const router = useRouter()
   const { data: productResponse, isLoading: isLoadingProduct } = useGetProductByIdQuery(params.id)
   const product = (productResponse as any)?.data
   const [updateProduct, { isLoading: isUpdating }] = useUpdateProductMutation()
+  const { data: categoriesData, isLoading: categoriesLoading } = useGetAllCategoriesQuery(false)
+  const categories = categoriesData?.data || []
+
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -24,7 +25,8 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
     images: [] as string[],
   })
   const [imageFiles, setImageFiles] = useState<Array<{ data: string; name: string }>>([])
-  const [error, setError] = useState("")
+  const [errors, setErrors] = useState<Record<string, string>>({})
+  const [touched, setTouched] = useState<Record<string, boolean>>({})
 
   useEffect(() => {
     if (product) {
@@ -33,227 +35,396 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
         description: product.description || "",
         price: product.price != null ? product.price.toString() : "",
         stock: product.stock != null ? product.stock.toString() : "",
-        category: typeof product.category === 'object' ? product.category?._id : product.category || "",
+        category: typeof product.category === "object" ? product.category?._id : product.category || "",
         images: product.images || [],
       })
     }
   }, [product])
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    })
-    setError("")
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value } = e.target
+    setFormData({ ...formData, [name]: value })
+    if (errors[name]) setErrors({ ...errors, [name]: "" })
+  }
+
+  const handleBlur = (field: string) => {
+    setTouched({ ...touched, [field]: true })
   }
 
   const handleImagesChange = useCallback((updater: string[] | ((prev: string[]) => string[])) => {
     setFormData(prev => ({
       ...prev,
-      images: typeof updater === 'function' ? updater(prev.images) : updater,
+      images: typeof updater === "function" ? updater(prev.images) : updater,
     }))
   }, [])
 
-  const handleImageFilesChange = useCallback((updater: Array<{ data: string; name: string }> | ((prev: Array<{ data: string; name: string }>) => Array<{ data: string; name: string }>)) => {
-    setImageFiles(prev => typeof updater === 'function' ? updater(prev) : updater)
-  }, [])
+  const handleImageFilesChange = useCallback(
+    (updater: Array<{ data: string; name: string }> | ((prev: Array<{ data: string; name: string }>) => Array<{ data: string; name: string }>)) => {
+      setImageFiles(prev => (typeof updater === "function" ? updater(prev) : updater))
+    },
+    []
+  )
+
+  const validateForm = (): boolean => {
+    const newErrors: Record<string, string> = {}
+    if (!formData.name.trim()) newErrors.name = "Product name is required"
+    else if (formData.name.length < 3) newErrors.name = "Must be at least 3 characters"
+    if (!formData.category.trim()) newErrors.category = "Category is required"
+    if (!formData.price) newErrors.price = "Price is required"
+    else if (isNaN(parseFloat(formData.price)) || parseFloat(formData.price) <= 0)
+      newErrors.price = "Price must be greater than 0"
+    if (!formData.description.trim()) newErrors.description = "Description is required"
+    else if (formData.description.length < 10) newErrors.description = "Must be at least 10 characters"
+    setErrors(newErrors)
+    setTouched({ name: true, category: true, price: true, description: true })
+    return Object.keys(newErrors).length === 0
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError("")
-
-    if (!formData.name || !formData.description || !formData.price || !formData.category) {
-      setError("Please fill in all required fields")
+    if (!validateForm()) {
+      toast.error("Please fix the errors in the form")
       return
     }
-
-    const price = parseFloat(formData.price)
-    if (isNaN(price) || price <= 0) {
-      setError("Please enter a valid price")
-      return
-    }
-
-    const stock = parseInt(formData.stock)
-    if (isNaN(stock) || stock < 0) {
-      setError("Please enter a valid stock quantity")
-      return
-    }
-
     try {
       await updateProduct({
         id: params.id,
         data: {
           name: formData.name,
           description: formData.description,
-          price,
-          stock,
+          price: parseFloat(formData.price),
+          stock: parseInt(formData.stock) || 0,
           category: formData.category,
-          images: formData.images.filter(img => img.startsWith('http')), // Keep only uploaded URLs
-          imageFiles, // New images to upload
+          images: formData.images.filter(img => img.startsWith("http")),
+          imageFiles,
         },
       }).unwrap()
-
+      toast.success("Product updated successfully!")
       router.push("/admin/products")
     } catch (err: any) {
-      setError(err.data?.message || "Failed to update product")
+      toast.error("Failed to update product", {
+        description: err.data?.message || "An error occurred",
+      })
     }
   }
 
+  /* ── shared styles ── */
+  const inputBase: React.CSSProperties = {
+    width: "100%",
+    height: "38px",
+    padding: "0 12px",
+    fontSize: "14px",
+    borderRadius: "6px",
+    border: "1px solid rgb(220, 223, 230)",
+    backgroundColor: "rgb(255, 255, 255)",
+    color: "rgb(15, 20, 35)",
+    outline: "none",
+    transition: "border-color 0.15s",
+  }
+
+  const inputError: React.CSSProperties = {
+    ...inputBase,
+    border: "1px solid rgb(185, 28, 28)",
+  }
+
+  const labelStyle: React.CSSProperties = {
+    display: "block",
+    fontSize: "13px",
+    fontWeight: 600,
+    marginBottom: "6px",
+    color: "rgb(55, 65, 81)",
+  }
+
+  const errorStyle: React.CSSProperties = {
+    fontSize: "12px",
+    color: "rgb(185, 28, 28)",
+    marginTop: "4px",
+  }
+
+  /* ── Loading state ── */
   if (isLoadingProduct) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <p className="text-gray-500">Loading product...</p>
+      <div
+        className="min-h-screen p-8 flex items-center justify-center"
+        style={{ backgroundColor: "rgb(246, 247, 249)" }}
+      >
+        <p style={{ fontSize: "14px", color: "rgb(110, 118, 135)" }}>Loading product...</p>
       </div>
     )
   }
 
+  /* ── Not found state ── */
   if (!product) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <p className="text-red-500">Product not found</p>
+      <div
+        className="min-h-screen p-8 flex items-center justify-center"
+        style={{ backgroundColor: "rgb(246, 247, 249)" }}
+      >
+        <p style={{ fontSize: "14px", color: "rgb(185, 28, 28)" }}>Product not found</p>
       </div>
     )
   }
 
   return (
-    <div className="space-y-6 max-w-4xl">
-      <div className="flex items-center gap-4">
-        <Link href="/admin/products">
-          <Button variant="ghost" size="icon">
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
-        </Link>
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-            Edit Product
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-1">
-            Update product information
-          </p>
+    <div className="min-h-screen p-8 space-y-6" style={{ backgroundColor: "rgb(246, 247, 249)" }}>
+
+      {/* Header */}
+      <div
+        className="flex items-center justify-between pb-6"
+        style={{ borderBottom: "1px solid rgb(220, 223, 230)" }}
+      >
+        <div className="flex items-center gap-3">
+          <Link href="/admin/products">
+            <button
+              className="flex items-center justify-center w-8 h-8 transition-colors"
+              style={{
+                borderRadius: "6px",
+                border: "1px solid rgb(220, 223, 230)",
+                backgroundColor: "rgb(255, 255, 255)",
+                color: "rgb(100, 108, 125)",
+              }}
+              onMouseEnter={e => (e.currentTarget.style.backgroundColor = "rgb(246, 247, 249)")}
+              onMouseLeave={e => (e.currentTarget.style.backgroundColor = "rgb(255, 255, 255)")}
+            >
+              <ArrowLeft className="w-4 h-4 stroke-[2.5]" />
+            </button>
+          </Link>
+          <div>
+            <h1
+              className="text-2xl font-bold tracking-tight"
+              style={{ color: "rgb(15, 20, 35)" }}
+            >
+              Edit Product
+            </h1>
+            <p className="text-sm mt-0.5" style={{ color: "rgb(110, 118, 135)" }}>
+              Update product information
+            </p>
+          </div>
         </div>
       </div>
 
-      <Card className="p-6">
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {error && (
-            <div className="p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
-              <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
-            </div>
-          )}
+      {/* Form Card */}
+      <div
+        className="rounded-md overflow-hidden"
+        style={{
+          backgroundColor: "rgb(255, 255, 255)",
+          border: "1px solid rgb(220, 223, 230)",
+        }}
+      >
+        <form onSubmit={handleSubmit}>
+          <div className="p-6 space-y-6">
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Row 1 — Name & Category */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+
+              {/* Name */}
+              <div>
+                <label htmlFor="name" style={labelStyle}>
+                  Product Name <span style={{ color: "rgb(185, 28, 28)" }}>*</span>
+                </label>
+                <input
+                  id="name"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  onBlur={() => handleBlur("name")}
+                  placeholder="Enter product name"
+                  disabled={isUpdating}
+                  style={touched.name && errors.name ? inputError : inputBase}
+                  onFocus={e => (e.currentTarget.style.borderColor = "rgb(100, 108, 125)")}
+                  onBlurCapture={e => {
+                    if (!(touched.name && errors.name))
+                      e.currentTarget.style.borderColor = "rgb(220, 223, 230)"
+                  }}
+                />
+                {touched.name && errors.name && <p style={errorStyle}>{errors.name}</p>}
+              </div>
+
+              {/* Category */}
+              <div>
+                <label htmlFor="category" style={labelStyle}>
+                  Category <span style={{ color: "rgb(185, 28, 28)" }}>*</span>
+                </label>
+                {categoriesLoading ? (
+                  <div
+                    className="animate-pulse"
+                    style={{
+                      height: "38px",
+                      borderRadius: "6px",
+                      backgroundColor: "rgb(243, 244, 246)",
+                    }}
+                  />
+                ) : (
+                  <select
+                    id="category"
+                    name="category"
+                    value={formData.category}
+                    onChange={handleChange}
+                    onBlur={() => handleBlur("category")}
+                    disabled={isUpdating}
+                    style={touched.category && errors.category ? inputError : inputBase}
+                  >
+                    <option value="">Select a category</option>
+                    {categories.map((cat: any) => (
+                      <option key={cat._id} value={cat._id}>
+                        {cat.name}
+                      </option>
+                    ))}
+                  </select>
+                )}
+                {touched.category && errors.category && (
+                  <p style={errorStyle}>{errors.category}</p>
+                )}
+              </div>
+            </div>
+
+            {/* Row 2 — Price & Stock */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+
+              {/* Price */}
+              <div>
+                <label htmlFor="price" style={labelStyle}>
+                  Price (₹) <span style={{ color: "rgb(185, 28, 28)" }}>*</span>
+                </label>
+                <input
+                  id="price"
+                  name="price"
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  value={formData.price}
+                  onChange={handleChange}
+                  onBlur={() => handleBlur("price")}
+                  placeholder="0.00"
+                  disabled={isUpdating}
+                  style={touched.price && errors.price ? inputError : inputBase}
+                  onFocus={e => (e.currentTarget.style.borderColor = "rgb(100, 108, 125)")}
+                  onBlurCapture={e => {
+                    if (!(touched.price && errors.price))
+                      e.currentTarget.style.borderColor = "rgb(220, 223, 230)"
+                  }}
+                />
+                {touched.price && errors.price && <p style={errorStyle}>{errors.price}</p>}
+              </div>
+
+              {/* Stock */}
+              <div>
+                <label htmlFor="stock" style={labelStyle}>
+                  Stock Quantity
+                </label>
+                <input
+                  id="stock"
+                  name="stock"
+                  type="number"
+                  min="0"
+                  value={formData.stock}
+                  onChange={handleChange}
+                  placeholder="0"
+                  disabled={isUpdating}
+                  style={inputBase}
+                  onFocus={e => (e.currentTarget.style.borderColor = "rgb(100, 108, 125)")}
+                  onBlurCapture={e =>
+                    (e.currentTarget.style.borderColor = "rgb(220, 223, 230)")
+                  }
+                />
+              </div>
+            </div>
+
+            {/* Description */}
             <div>
-              <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Product Name *
+              <label htmlFor="description" style={labelStyle}>
+                Description <span style={{ color: "rgb(185, 28, 28)" }}>*</span>
               </label>
-              <Input
-                id="name"
-                name="name"
-                value={formData.name}
+              <textarea
+                id="description"
+                name="description"
+                value={formData.description}
                 onChange={handleChange}
-                placeholder="Enter product name"
-                required
+                onBlur={() => handleBlur("description")}
+                placeholder="Enter product description"
+                rows={4}
                 disabled={isUpdating}
+                style={{
+                  ...(touched.description && errors.description ? inputError : inputBase),
+                  height: "auto",
+                  padding: "10px 12px",
+                  resize: "vertical",
+                  lineHeight: "1.5",
+                }}
+                onFocus={e => (e.currentTarget.style.borderColor = "rgb(100, 108, 125)")}
+                onBlurCapture={e => {
+                  if (!(touched.description && errors.description))
+                    e.currentTarget.style.borderColor = "rgb(220, 223, 230)"
+                }}
               />
+              {touched.description && errors.description && (
+                <p style={errorStyle}>{errors.description}</p>
+              )}
             </div>
 
+            {/* Images */}
             <div>
-              <label htmlFor="category" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Category *
+              <label style={labelStyle}>
+                Product Images{" "}
+                <span style={{ fontSize: "12px", fontWeight: 400, color: "rgb(150, 158, 175)" }}>
+                  (up to 10)
+                </span>
               </label>
-              <Input
-                id="category"
-                name="category"
-                value={formData.category}
-                onChange={handleChange}
-                placeholder="e.g., Ice Pops, Cream Rolls"
-                required
-                disabled={isUpdating}
+              <ImageUploader
+                images={formData.images}
+                onImagesChange={handleImagesChange}
+                imageFiles={imageFiles}
+                onImageFilesChange={handleImageFilesChange}
+                maxImages={10}
               />
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label htmlFor="price" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Price ($) *
-              </label>
-              <Input
-                id="price"
-                name="price"
-                type="number"
-                step="0.01"
-                min="0.01"
-                value={formData.price}
-                onChange={handleChange}
-                placeholder="0.00"
-                required
-                disabled={isUpdating}
-              />
-            </div>
-
-            <div>
-              <label htmlFor="stock" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Stock *
-              </label>
-              <Input
-                id="stock"
-                name="stock"
-                type="number"
-                min="0"
-                value={formData.stock}
-                onChange={handleChange}
-                placeholder="0"
-                required
-                disabled={isUpdating}
-              />
-            </div>
-          </div>
-
-
-
-          <div>
-            <label htmlFor="description" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Description *
-            </label>
-            <textarea
-              id="description"
-              name="description"
-              value={formData.description}
-              onChange={handleChange}
-              placeholder="Enter product description"
-              rows={4}
-              required
-              disabled={isUpdating}
-              className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Product Images (up to 10)
-            </label>
-            <ImageUploader
-              images={formData.images}
-              onImagesChange={handleImagesChange}
-              imageFiles={imageFiles}
-              onImageFilesChange={handleImageFilesChange}
-              maxImages={10}
-            />
-          </div>
-
-          <div className="flex justify-end gap-3 pt-4">
+          {/* Footer */}
+          <div
+            className="flex items-center justify-end gap-3 px-6 py-4"
+            style={{
+              borderTop: "1px solid rgb(220, 223, 230)",
+              backgroundColor: "rgb(248, 249, 251)",
+            }}
+          >
             <Link href="/admin/products">
-              <Button type="button" variant="outline" disabled={isUpdating}>
+              <button
+                type="button"
+                className="text-sm font-semibold px-4 py-2 transition-colors"
+                style={{
+                  borderRadius: "6px",
+                  border: "1px solid rgb(220, 223, 230)",
+                  backgroundColor: "rgb(255, 255, 255)",
+                  color: "rgb(55, 65, 81)",
+                }}
+                onMouseEnter={e => (e.currentTarget.style.backgroundColor = "rgb(246, 247, 249)")}
+                onMouseLeave={e => (e.currentTarget.style.backgroundColor = "rgb(255, 255, 255)")}
+              >
                 Cancel
-              </Button>
+              </button>
             </Link>
-            <Button type="submit" disabled={isUpdating} className="bg-primary hover:bg-primary/90">
+            <button
+              type="submit"
+              disabled={isUpdating}
+              className="text-sm font-bold px-5 py-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{
+                borderRadius: "6px",
+                backgroundColor: "rgb(185, 28, 28)",
+                color: "rgb(255, 255, 255)",
+              }}
+              onMouseEnter={e => {
+                if (!isUpdating) e.currentTarget.style.backgroundColor = "rgb(153, 27, 27)"
+              }}
+              onMouseLeave={e =>
+                (e.currentTarget.style.backgroundColor = "rgb(185, 28, 28)")
+              }
+            >
               {isUpdating ? "Updating..." : "Update Product"}
-            </Button>
+            </button>
           </div>
         </form>
-      </Card>
+      </div>
     </div>
   )
 }

@@ -3,11 +3,9 @@
 import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Plus, Pencil, Trash2, Search } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Card } from "@/components/ui/card"
+import { Plus, Pencil, Trash2, Search, AlertTriangle } from "lucide-react"
 import { useGetProductsQuery, useDeleteProductMutation } from "@/lib/services/api"
+import { toast } from "sonner"
 
 export default function AdminProductsPage() {
   const router = useRouter()
@@ -16,157 +14,463 @@ export default function AdminProductsPage() {
   const { data, isLoading, error } = useGetProductsQuery({ page, limit: 10, search })
   const [deleteProduct, { isLoading: isDeleting }] = useDeleteProductMutation()
 
-  const handleDelete = async (id: string, name: string) => {
-    if (window.confirm(`Are you sure you want to delete "${name}"?`)) {
-      try {
-        await deleteProduct(id).unwrap()
-      } catch (error) {
-        alert("Failed to delete product")
-      }
+  const [confirmDialog, setConfirmDialog] = useState<{
+    open: boolean
+    productId: string
+    productName: string
+  }>({ open: false, productId: "", productName: "" })
+
+  const openConfirm = (id: string, name: string) => {
+    setConfirmDialog({ open: true, productId: id, productName: name })
+  }
+
+  const closeConfirm = () => {
+    setConfirmDialog({ open: false, productId: "", productName: "" })
+  }
+
+  const handleDelete = async () => {
+    try {
+      await deleteProduct(confirmDialog.productId).unwrap()
+      toast.success("Product deleted successfully")
+      closeConfirm()
+    } catch {
+      toast.error("Failed to delete product")
+      closeConfirm()
     }
   }
 
+  const products = data?.data?.products || []
+  const pagination = data?.data?.pagination || data?.pagination
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="min-h-screen p-8 space-y-6" style={{ backgroundColor: "rgb(246, 247, 249)" }}>
+
+      {/* ── Confirm Delete Dialog ── */}
+      {confirmDialog.open && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center"
+          style={{ backgroundColor: "rgba(0, 0, 0, 0.35)" }}
+          onClick={closeConfirm}
+        >
+          <div
+            className="w-full max-w-sm mx-4"
+            style={{
+              backgroundColor: "rgb(255, 255, 255)",
+              borderRadius: "8px",
+              border: "1px solid rgb(220, 223, 230)",
+              boxShadow: "0 8px 32px rgba(0,0,0,0.12)",
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Dialog Header */}
+            <div
+              className="flex items-start gap-3 p-5"
+              style={{ borderBottom: "1px solid rgb(240, 242, 245)" }}
+            >
+              <div
+                className="flex items-center justify-center w-9 h-9 shrink-0"
+                style={{
+                  borderRadius: "6px",
+                  backgroundColor: "rgb(254, 242, 242)",
+                  border: "1px solid rgb(254, 202, 202)",
+                }}
+              >
+                <AlertTriangle
+                  className="w-4 h-4"
+                  style={{ color: "rgb(185, 28, 28)", strokeWidth: 2.5 }}
+                />
+              </div>
+              <div>
+                <p
+                  className="text-sm font-bold"
+                  style={{ color: "rgb(15, 20, 35)" }}
+                >
+                  Delete Product
+                </p>
+                <p
+                  className="text-xs mt-0.5"
+                  style={{ color: "rgb(110, 118, 135)" }}
+                >
+                  This action cannot be undone
+                </p>
+              </div>
+            </div>
+
+            {/* Dialog Body */}
+            <div className="px-5 py-4">
+              <p className="text-sm" style={{ color: "rgb(55, 65, 81)" }}>
+                Are you sure you want to delete{" "}
+                <span className="font-bold" style={{ color: "rgb(15, 20, 35)" }}>
+                  "{confirmDialog.productName}"
+                </span>
+                ? This will permanently remove the product from your inventory.
+              </p>
+            </div>
+
+            {/* Dialog Footer */}
+            <div
+              className="flex items-center justify-end gap-2 px-5 py-4"
+              style={{ borderTop: "1px solid rgb(240, 242, 245)", backgroundColor: "rgb(248, 249, 251)", borderRadius: "0 0 8px 8px" }}
+            >
+              <button
+                onClick={closeConfirm}
+                disabled={isDeleting}
+                className="text-xs font-semibold px-4 py-2 transition-colors disabled:opacity-50"
+                style={{
+                  borderRadius: "6px",
+                  border: "1px solid rgb(220, 223, 230)",
+                  backgroundColor: "rgb(255, 255, 255)",
+                  color: "rgb(55, 65, 81)",
+                }}
+                onMouseEnter={e => (e.currentTarget.style.backgroundColor = "rgb(246, 247, 249)")}
+                onMouseLeave={e => (e.currentTarget.style.backgroundColor = "rgb(255, 255, 255)")}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={isDeleting}
+                className="text-xs font-bold px-4 py-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{
+                  borderRadius: "6px",
+                  backgroundColor: "rgb(185, 28, 28)",
+                  color: "rgb(255, 255, 255)",
+                }}
+                onMouseEnter={e => {
+                  if (!isDeleting) e.currentTarget.style.backgroundColor = "rgb(153, 27, 27)"
+                }}
+                onMouseLeave={e => (e.currentTarget.style.backgroundColor = "rgb(185, 28, 28)")}
+              >
+                {isDeleting ? "Deleting..." : "Delete Product"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Header */}
+      <div
+        className="flex items-center justify-between pb-6"
+        style={{ borderBottom: "1px solid rgb(220, 223, 230)" }}
+      >
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+          <h1 className="text-2xl font-bold tracking-tight" style={{ color: "rgb(15, 20, 35)" }}>
             Products
           </h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-1">
+          <p className="text-sm mt-0.5" style={{ color: "rgb(110, 118, 135)" }}>
             Manage your product inventory
           </p>
         </div>
         <Link href="/admin/products/create">
-          <Button className="bg-primary hover:bg-primary/90">
-            <Plus className="w-4 h-4 mr-2" />
+          <button
+            className="flex items-center gap-2 text-sm font-bold px-4 py-2.5 rounded-md transition-all"
+            style={{ backgroundColor: "rgb(185, 28, 28)", color: "rgb(255, 255, 255)" }}
+            onMouseEnter={e => (e.currentTarget.style.backgroundColor = "rgb(153, 27, 27)")}
+            onMouseLeave={e => (e.currentTarget.style.backgroundColor = "rgb(185, 28, 28)")}
+          >
+            <Plus className="w-4 h-4 stroke-[3]" />
             Add Product
-          </Button>
+          </button>
         </Link>
       </div>
 
-      {/* Search */}
-      <Card className="p-4">
-        <div className="flex items-center gap-2">
-          <Search className="w-5 h-5 text-gray-400" />
-          <Input
-            placeholder="Search products..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="flex-1"
-          />
-        </div>
-      </Card>
+      {/* Search Bar */}
+      <div
+        className="flex items-center gap-3 px-4 py-3 rounded-md"
+        style={{
+          backgroundColor: "rgb(255, 255, 255)",
+          border: "1px solid rgb(220, 223, 230)",
+        }}
+      >
+        <Search className="w-4 h-4 shrink-0 stroke-[2.5]" style={{ color: "rgb(185, 28, 28)" }} />
+        <input
+          type="text"
+          placeholder="Search products by name..."
+          value={search}
+          onChange={(e) => { setSearch(e.target.value); setPage(1) }}
+          className="flex-1 text-sm outline-none bg-transparent"
+          style={{ color: "rgb(30, 35, 50)" }}
+        />
+        {search && (
+          <button
+            onClick={() => setSearch("")}
+            className="text-xs font-semibold transition-colors"
+            style={{ color: "rgb(156, 163, 175)" }}
+            onMouseEnter={e => (e.currentTarget.style.color = "rgb(75, 85, 99)")}
+            onMouseLeave={e => (e.currentTarget.style.color = "rgb(156, 163, 175)")}
+          >
+            Clear
+          </button>
+        )}
+      </div>
 
       {/* Products Table */}
-      <Card className="overflow-hidden">
+      <div
+        className="rounded-md overflow-hidden"
+        style={{
+          backgroundColor: "rgb(255, 255, 255)",
+          border: "1px solid rgb(220, 223, 230)",
+        }}
+      >
         <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50 dark:bg-gray-800">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+          <table className="w-full text-sm">
+            <thead>
+              <tr
+                style={{
+                  borderBottom: "1px solid rgb(220, 223, 230)",
+                  backgroundColor: "rgb(248, 249, 251)",
+                }}
+              >
+                <th
+                  className="text-left px-5 py-3.5 text-xs font-bold uppercase tracking-wider"
+                  style={{ color: "rgb(100, 108, 125)" }}
+                >
+                  #
+                </th>
+                <th
+                  className="text-left px-5 py-3.5 text-xs font-bold uppercase tracking-wider"
+                  style={{ color: "rgb(100, 108, 125)" }}
+                >
                   Product
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th
+                  className="text-left px-5 py-3.5 text-xs font-bold uppercase tracking-wider"
+                  style={{ color: "rgb(100, 108, 125)" }}
+                >
                   Category
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  Stock
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th
+                  className="text-left px-5 py-3.5 text-xs font-bold uppercase tracking-wider"
+                  style={{ color: "rgb(100, 108, 125)" }}
+                >
                   Price
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th
+                  className="text-left px-5 py-3.5 text-xs font-bold uppercase tracking-wider"
+                  style={{ color: "rgb(100, 108, 125)" }}
+                >
+                  Stock
+                </th>
+                <th
+                  className="text-left px-5 py-3.5 text-xs font-bold uppercase tracking-wider"
+                  style={{ color: "rgb(100, 108, 125)" }}
+                >
                   Created
                 </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th
+                  className="text-right px-5 py-3.5 text-xs font-bold uppercase tracking-wider"
+                  style={{ color: "rgb(100, 108, 125)" }}
+                >
                   Actions
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+            <tbody>
               {isLoading ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-4 text-center text-gray-500">
+                  <td
+                    colSpan={7}
+                    className="px-5 py-12 text-center text-sm"
+                    style={{ color: "rgb(156, 163, 175)" }}
+                  >
                     Loading products...
                   </td>
                 </tr>
               ) : error ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-4 text-center text-red-500">
-                    Error loading products
+                  <td
+                    colSpan={7}
+                    className="px-5 py-12 text-center text-sm"
+                    style={{ color: "rgb(185, 28, 28)" }}
+                  >
+                    Failed to load products. Please try again.
                   </td>
                 </tr>
-              ) : !Array.isArray(data?.data?.products) || data?.data?.products.length === 0 ? (
+              ) : products.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-4 text-center text-gray-500">
-                    No products found
+                  <td
+                    colSpan={7}
+                    className="px-5 py-12 text-center text-sm"
+                    style={{ color: "rgb(156, 163, 175)" }}
+                  >
+                    {search ? `No products found for "${search}"` : "No products yet."}
                   </td>
                 </tr>
               ) : (
-                data?.data?.products.map((product: any) => (
-                  <tr key={product._id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
-                    <td className="px-6 py-4 whitespace-nowrap">
+                products.map((product: any, index: number) => (
+                  <tr
+                    key={product._id}
+                    className="transition-colors"
+                    style={{
+                      borderBottom:
+                        index < products.length - 1
+                          ? "1px solid rgb(240, 242, 245)"
+                          : "none",
+                    }}
+                    onMouseEnter={e =>
+                      (e.currentTarget.style.backgroundColor = "rgb(252, 252, 253)")
+                    }
+                    onMouseLeave={e =>
+                      (e.currentTarget.style.backgroundColor = "transparent")
+                    }
+                  >
+                    {/* Row Number */}
+                    <td
+                      className="px-5 py-4 text-xs font-bold"
+                      style={{ color: "rgb(185, 28, 28)" }}
+                    >
+                      {(page - 1) * 10 + index + 1}
+                    </td>
+
+                    {/* Product */}
+                    <td className="px-5 py-4">
                       <div className="flex items-center gap-3">
-                        {(product.images[0] || product.productImage) && (
+                        {product.images?.[0] || product.productImage ? (
                           <img
-                            src={product.images[0] || product.productImage}
+                            src={product.images?.[0] || product.productImage}
                             alt={product.name}
-                            className="w-12 h-12 object-cover rounded"
+                            className="w-9 h-9 object-cover shrink-0"
+                            style={{
+                              borderRadius: "4px",
+                              border: "1px solid rgb(220, 223, 230)",
+                            }}
+                          />
+                        ) : (
+                          <div
+                            className="w-9 h-9 shrink-0"
+                            style={{
+                              borderRadius: "4px",
+                              backgroundColor: "rgb(243, 244, 246)",
+                              border: "1px solid rgb(220, 223, 230)",
+                            }}
                           />
                         )}
-                        <div>
-                          <div className="font-semibold text-gray-900 dark:text-white">
+                        <div className="min-w-0">
+                          <p
+                            className="font-semibold truncate max-w-[180px]"
+                            style={{ color: "rgb(15, 20, 35)" }}
+                          >
                             {product.name}
-                          </div>
-                          <div className="text-sm text-gray-500 line-clamp-1">
+                          </p>
+                          <p
+                            className="text-xs truncate max-w-[180px] mt-0.5"
+                            style={{ color: "rgb(156, 163, 175)" }}
+                          >
                             {product.description}
-                          </div>
+                          </p>
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="px-2 py-1 text-xs font-semibold rounded-full bg-primary/10 text-primary">
-                        {product.category?.name || product.category}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+
+                    {/* Category */}
+                    <td className="px-5 py-4">
                       <span
-                        className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold ${
-                          product.stock === 0
-                            ? 'bg-red-100 text-red-700'
-                            : product.stock <= 10
-                            ? 'bg-yellow-100 text-yellow-700'
-                            : 'bg-green-100 text-green-700'
-                        }`}
+                        className="text-xs font-bold px-2.5 py-1"
+                        style={{
+                          borderRadius: "4px",
+                          backgroundColor: "rgb(239, 246, 255)",
+                          color: "rgb(29, 78, 216)",
+                          border: "1px solid rgb(219, 234, 254)",
+                        }}
                       >
-                        {product.stock ?? '–'}
+                        {product.category?.name || product.category || "—"}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap font-semibold text-gray-900 dark:text-white">
-                      ${(product.price ?? 0).toFixed(2)}
+
+                    {/* Price */}
+                    <td
+                      className="px-5 py-4 font-bold"
+                      style={{ color: "rgb(15, 20, 35)" }}
+                    >
+                      ₹{(product.price ?? 0).toFixed(2)}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {new Date(product.createdAt).toLocaleDateString()}
+
+                    {/* Stock */}
+                    <td className="px-5 py-4">
+                      <span
+                        className="text-xs font-bold px-2.5 py-1"
+                        style={
+                          product.stock === 0
+                            ? {
+                                borderRadius: "4px",
+                                backgroundColor: "rgb(254, 242, 242)",
+                                color: "rgb(185, 28, 28)",
+                                border: "1px solid rgb(254, 202, 202)",
+                              }
+                            : product.stock <= 10
+                            ? {
+                                borderRadius: "4px",
+                                backgroundColor: "rgb(255, 251, 235)",
+                                color: "rgb(161, 72, 10)",
+                                border: "1px solid rgb(253, 230, 138)",
+                              }
+                            : {
+                                borderRadius: "4px",
+                                backgroundColor: "rgb(240, 253, 244)",
+                                color: "rgb(21, 91, 48)",
+                                border: "1px solid rgb(187, 247, 208)",
+                              }
+                        }
+                      >
+                        {product.stock === 0
+                          ? "Out of Stock"
+                          : product.stock <= 10
+                          ? `Low — ${product.stock}`
+                          : product.stock}
+                      </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <div className="flex items-center justify-end gap-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
+
+                    {/* Created */}
+                    <td
+                      className="px-5 py-4 text-sm"
+                      style={{ color: "rgb(150, 158, 175)" }}
+                    >
+                      {new Date(product.createdAt).toLocaleDateString("en-IN", {
+                        day: "2-digit",
+                        month: "short",
+                        year: "numeric",
+                      })}
+                    </td>
+
+                    {/* Actions */}
+                    <td className="px-5 py-4">
+                      <div className="flex items-center justify-end gap-1">
+                        {/* Edit */}
+                        <button
                           onClick={() => router.push(`/admin/products/${product._id}`)}
+                          className="p-1.5 transition-colors"
+                          style={{ borderRadius: "4px", color: "rgb(100, 108, 125)" }}
+                          onMouseEnter={e => {
+                            e.currentTarget.style.color = "rgb(29, 78, 216)"
+                            e.currentTarget.style.backgroundColor = "rgb(239, 246, 255)"
+                          }}
+                          onMouseLeave={e => {
+                            e.currentTarget.style.color = "rgb(100, 108, 125)"
+                            e.currentTarget.style.backgroundColor = "transparent"
+                          }}
+                          title="Edit"
                         >
-                          <Pencil className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDelete(product._id, product.name)}
+                          <Pencil className="w-4 h-4 stroke-[2.5]" />
+                        </button>
+
+                        {/* Delete */}
+                        <button
+                          onClick={() => openConfirm(product._id, product.name)}
                           disabled={isDeleting}
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          className="p-1.5 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                          style={{ borderRadius: "4px", color: "rgb(150, 158, 175)" }}
+                          onMouseEnter={e => {
+                            e.currentTarget.style.color = "rgb(185, 28, 28)"
+                            e.currentTarget.style.backgroundColor = "rgb(254, 242, 242)"
+                          }}
+                          onMouseLeave={e => {
+                            e.currentTarget.style.color = "rgb(150, 158, 175)"
+                            e.currentTarget.style.backgroundColor = "transparent"
+                          }}
+                          title="Delete"
                         >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
+                          <Trash2 className="w-4 h-4 stroke-[2.5]" />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -177,36 +481,75 @@ export default function AdminProductsPage() {
         </div>
 
         {/* Pagination */}
-        {data && data.pagination && data.pagination.totalPages > 1 && (
-          <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700">
-            <div className="flex items-center justify-between">
-              <div className="text-sm text-gray-500">
-                Showing {(page - 1) * data.pagination.limit + 1} to{" "}
-                {Math.min(page * data.pagination.limit, data.pagination.total)} of{" "}
-                {data.pagination.total} products
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPage(page - 1)}
-                  disabled={page === 1}
-                >
-                  Previous
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPage(page + 1)}
-                  disabled={page >= data.pagination.totalPages}
-                >
-                  Next
-                </Button>
-              </div>
+        {pagination && pagination.totalPages > 1 && (
+          <div
+            className="flex items-center justify-between px-5 py-4"
+            style={{
+              borderTop: "1px solid rgb(240, 242, 245)",
+              backgroundColor: "rgb(248, 249, 251)",
+            }}
+          >
+            <p className="text-xs" style={{ color: "rgb(150, 158, 175)" }}>
+              Showing{" "}
+              <span className="font-bold" style={{ color: "rgb(30, 35, 50)" }}>
+                {(page - 1) * pagination.limit + 1}–
+                {Math.min(page * pagination.limit, pagination.total)}
+              </span>{" "}
+              of{" "}
+              <span className="font-bold" style={{ color: "rgb(30, 35, 50)" }}>
+                {pagination.total}
+              </span>{" "}
+              products
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setPage(page - 1)}
+                disabled={page === 1}
+                className="text-xs font-bold px-3 py-1.5 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                style={{
+                  borderRadius: "4px",
+                  border: "1px solid rgb(220, 223, 230)",
+                  color: "rgb(30, 35, 50)",
+                  backgroundColor: "rgb(255, 255, 255)",
+                }}
+                onMouseEnter={e =>
+                  (e.currentTarget.style.backgroundColor = "rgb(243, 244, 246)")
+                }
+                onMouseLeave={e =>
+                  (e.currentTarget.style.backgroundColor = "rgb(255, 255, 255)")
+                }
+              >
+                ← Prev
+              </button>
+              <span
+                className="text-xs font-bold px-2"
+                style={{ color: "rgb(100, 108, 125)" }}
+              >
+                {page} / {pagination.totalPages}
+              </span>
+              <button
+                onClick={() => setPage(page + 1)}
+                disabled={page >= pagination.totalPages}
+                className="text-xs font-bold px-3 py-1.5 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                style={{
+                  borderRadius: "4px",
+                  border: "1px solid rgb(220, 223, 230)",
+                  color: "rgb(30, 35, 50)",
+                  backgroundColor: "rgb(255, 255, 255)",
+                }}
+                onMouseEnter={e =>
+                  (e.currentTarget.style.backgroundColor = "rgb(243, 244, 246)")
+                }
+                onMouseLeave={e =>
+                  (e.currentTarget.style.backgroundColor = "rgb(255, 255, 255)")
+                }
+              >
+                Next →
+              </button>
             </div>
           </div>
         )}
-      </Card>
+      </div>
     </div>
   )
 }

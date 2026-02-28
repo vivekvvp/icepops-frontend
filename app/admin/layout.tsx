@@ -1,164 +1,217 @@
 "use client"
 
-import { useRouter } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import Link from "next/link"
-import { 
-  LayoutDashboard, 
-  Package, 
-  LogOut, 
-  Home, 
-  ShoppingCart, 
-  Users, 
-  Tag, 
-  Star, 
+import {
+  LayoutDashboard,
+  Package,
+  LogOut,
+  Home,
+  ShoppingCart,
+  Users,
+  Tag,
+  Star,
   FolderTree,
-  Boxes
+  Boxes,
 } from "lucide-react"
-import { Button } from "@/components/ui/button"
 import { useAppSelector, useAppDispatch } from "@/lib/store/hooks"
 import { selectCurrentUser, logout as logoutAction } from "@/lib/store/authSlice"
 import { useLogoutMutation } from "@/lib/services/api"
 import { AdminProtectedRoute } from "@/lib/ProtectedRoute"
 import { toast } from "sonner"
 
-export default function AdminLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
-  const router = useRouter()
+const navItems = [
+  { href: '/admin',            label: 'Dashboard',  icon: LayoutDashboard, exact: true },
+  { href: '/admin/products',   label: 'Products',   icon: Package },
+  { href: '/admin/categories', label: 'Categories', icon: FolderTree },
+  { href: '/admin/orders',     label: 'Orders',     icon: ShoppingCart },
+  { href: '/admin/users',      label: 'Users',      icon: Users },
+  { href: '/admin/coupons',    label: 'Coupons',    icon: Tag },
+  { href: '/admin/reviews',    label: 'Reviews',    icon: Star },
+  { href: '/admin/inventory',  label: 'Inventory',  icon: Boxes },
+]
+
+export default function AdminLayout({ children }: { children: React.ReactNode }) {
+  const router   = useRouter()
+  const pathname = usePathname()
   const dispatch = useAppDispatch()
-  const user = useAppSelector(selectCurrentUser)
+  const user     = useAppSelector(selectCurrentUser)
   const [logout] = useLogoutMutation()
 
   const handleLogout = async () => {
     try {
       await logout().unwrap()
-      dispatch(logoutAction())
-      toast.success("Logged out successfully")
-      router.push("/")
-    } catch (error) {
-      dispatch(logoutAction())
-      toast.success("Logged out successfully")
-      router.push("/")
-    }
+    } catch {}
+    dispatch(logoutAction())
+    toast.success("Logged out successfully")
+    router.push("/")
   }
+
+  const isActive = (href: string, exact?: boolean) =>
+    exact ? pathname === href : pathname === href || pathname.startsWith(href + '/')
 
   return (
     <AdminProtectedRoute>
-      <div className="flex min-h-screen bg-gray-50 dark:bg-gray-900">
-        {/* Sidebar */}
-        <aside className="w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 fixed h-full">
-          <div className="flex flex-col h-full">
-            {/* Logo */}
-            <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-              <Link href="/admin" className="flex items-center gap-3 text-primary">
-                <div className="size-8">
-                  <svg fill="none" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
-                    <path
-                      clipRule="evenodd"
-                      d="M24 4H42V17.3333V30.6667H24V44H6V30.6667V17.3333H24V4Z"
-                      fill="currentColor"
-                      fillRule="evenodd"
+      <div className="flex min-h-screen" style={{ backgroundColor: 'rgb(246, 247, 249)' }}>
+
+        {/* ── Sidebar ── */}
+        <aside
+          className="w-60 fixed h-full flex flex-col"
+          style={{
+            backgroundColor: 'rgb(255, 255, 255)',
+            borderRight: '1px solid rgb(220, 223, 230)',
+            zIndex: 40,
+          }}
+        >
+          {/* Logo */}
+          <div
+            className="px-5 py-5 flex items-center gap-3 shrink-0"
+            style={{ borderBottom: '1px solid rgb(220, 223, 230)' }}
+          >
+            <div
+              className="flex items-center justify-center w-8 h-8 shrink-0"
+              style={{
+                borderRadius: '6px',
+                backgroundColor: 'rgb(185, 28, 28)',
+              }}
+            >
+              <svg fill="none" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" className="w-4 h-4">
+                <path
+                  clipRule="evenodd"
+                  d="M24 4H42V17.3333V30.6667H24V44H6V30.6667V17.3333H24V4Z"
+                  fill="white"
+                  fillRule="evenodd"
+                />
+              </svg>
+            </div>
+            <div>
+              <h2
+                className="text-base font-extrabold leading-tight tracking-tight"
+                style={{ color: 'rgb(15, 20, 35)' }}
+              >
+                IcePops
+              </h2>
+              <p className="text-xs" style={{ color: 'rgb(150, 158, 175)' }}>
+                Admin Panel
+              </p>
+            </div>
+          </div>
+
+          {/* Nav */}
+          <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-3 ">
+            {navItems.map(({ href, label, icon: Icon, exact }) => {
+              const active = isActive(href, exact)
+              return (
+                <Link key={href} href={href}>
+                  <div
+                    className="flex items-center gap-3 px-3 py-2.5 text-sm font-semibold transition-colors cursor-pointer"
+                    style={{
+                      borderRadius: '6px',
+                      backgroundColor: active ? 'rgb(254, 242, 242)' : 'transparent',
+                      color: active ? 'rgb(185, 28, 28)' : 'rgb(75, 85, 99)',
+                    }}
+                    onMouseEnter={e => {
+                      if (!active) {
+                        e.currentTarget.style.backgroundColor = 'rgb(248, 249, 251)'
+                        e.currentTarget.style.color = 'rgb(15, 20, 35)'
+                      }
+                    }}
+                    onMouseLeave={e => {
+                      if (!active) {
+                        e.currentTarget.style.backgroundColor = 'transparent'
+                        e.currentTarget.style.color = 'rgb(75, 85, 99)'
+                      }
+                    }}
+                  >
+                    <Icon
+                      className="w-4 h-4 shrink-0"
+                      style={{ strokeWidth: active ? 2.5 : 2 }}
                     />
-                  </svg>
-                </div>
-                <div>
-                  <h2 className="text-xl font-extrabold">IcePops</h2>
-                  <p className="text-xs text-gray-500">Admin Panel</p>
-                </div>
-              </Link>
-            </div>
+                    {label}
+                    {active && (
+                      <div
+                        className="ml-auto w-1.5 h-1.5 rounded-full shrink-0"
+                        style={{ backgroundColor: 'rgb(185, 28, 28)' }}
+                      />
+                    )}
+                  </div>
+                </Link>
+              )
+            })}
+          </nav>
 
-            {/* Navigation */}
-            <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
-              <Link
-                href="/admin"
-                className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+          {/* User Section */}
+          <div
+            className="px-3 py-4 shrink-0 space-y-1"
+            style={{ borderTop: '1px solid rgb(220, 223, 230)' }}
+          >
+            {/* User info */}
+            <div
+              className="flex items-center gap-2.5 px-3 py-2.5 rounded-md mb-2"
+              style={{
+                backgroundColor: 'rgb(248, 249, 251)',
+                border: '1px solid rgb(240, 242, 245)',
+              }}
+            >
+              <div
+                className="flex items-center justify-center w-7 h-7 text-xs font-bold shrink-0"
+                style={{
+                  borderRadius: '6px',
+                  backgroundColor: 'rgb(254, 242, 242)',
+                  border: '1px solid rgb(254, 202, 202)',
+                  color: 'rgb(185, 28, 28)',
+                }}
               >
-                <LayoutDashboard className="w-5 h-5" />
-                <span className="font-medium">Dashboard</span>
-              </Link>
-              <Link
-                href="/admin/products"
-                className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-              >
-                <Package className="w-5 h-5" />
-                <span className="font-medium">Products</span>
-              </Link>
-              <Link
-                href="/admin/categories"
-                className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-              >
-                <FolderTree className="w-5 h-5" />
-                <span className="font-medium">Categories</span>
-              </Link>
-              <Link
-                href="/admin/orders"
-                className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-              >
-                <ShoppingCart className="w-5 h-5" />
-                <span className="font-medium">Orders</span>
-              </Link>
-              <Link
-                href="/admin/users"
-                className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-              >
-                <Users className="w-5 h-5" />
-                <span className="font-medium">Users</span>
-              </Link>
-              <Link
-                href="/admin/coupons"
-                className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-              >
-                <Tag className="w-5 h-5" />
-                <span className="font-medium">Coupons</span>
-              </Link>
-              <Link
-                href="/admin/reviews"
-                className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-              >
-                <Star className="w-5 h-5" />
-                <span className="font-medium">Reviews</span>
-              </Link>
-              <Link
-                href="/admin/inventory"
-                className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-              >
-                <Boxes className="w-5 h-5" />
-                <span className="font-medium">Inventory</span>
-              </Link>
-            </nav>
-
-            {/* User Section */}
-            <div className="p-4 border-t border-gray-200 dark:border-gray-700">
-              <div className="mb-3 px-2">
-                <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                  {user?.name || "Admin User"}
-                </p>
-                <p className="text-xs text-gray-500">{user?.email}</p>
+                {user?.name?.charAt(0).toUpperCase() || 'A'}
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleLogout}
-                className="w-full justify-start gap-2"
-              >
-                <LogOut className="w-4 h-4" />
-                Logout
-              </Button>
-              <Link href="/">
-                <Button variant="ghost" size="sm" className="w-full justify-start gap-2 mt-2">
-                  <Home className="w-4 h-4" />
-                  Back to Site
-                </Button>
-              </Link>
+              <div className="overflow-hidden">
+                <p
+                  className="text-xs font-bold truncate"
+                  style={{ color: 'rgb(15, 20, 35)' }}
+                >
+                  {user?.name || 'Admin User'}
+                </p>
+                <p className="text-xs truncate" style={{ color: 'rgb(150, 158, 175)' }}>
+                  {user?.email}
+                </p>
+              </div>
             </div>
+
+            {/* Back to site */}
+            <Link href="/">
+              <div
+                className="flex items-center gap-3 px-3 py-2.5 text-sm font-semibold transition-colors cursor-pointer"
+                style={{ borderRadius: '6px', color: 'rgb(75, 85, 99)' }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.backgroundColor = 'rgb(248, 249, 251)'
+                  e.currentTarget.style.color = 'rgb(15, 20, 35)'
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.backgroundColor = 'transparent'
+                  e.currentTarget.style.color = 'rgb(75, 85, 99)'
+                }}
+              >
+                <Home className="w-4 h-4 shrink-0" strokeWidth={2} />
+                Back to Site
+              </div>
+            </Link>
+
+            {/* Logout */}
+            <button
+              onClick={handleLogout}
+              className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-semibold transition-colors"
+              style={{ borderRadius: '6px', color: 'rgb(185, 28, 28)' }}
+              onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'rgb(254, 242, 242)')}
+              onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+            >
+              <LogOut className="w-4 h-4 shrink-0" strokeWidth={2.5} />
+              Logout
+            </button>
           </div>
         </aside>
 
-        {/* Main Content */}
-        <main className="flex-1 ml-64 p-8">
+        {/* ── Main Content ── */}
+        <main className="flex-1" style={{ marginLeft: '240px' }}>
           {children}
         </main>
       </div>

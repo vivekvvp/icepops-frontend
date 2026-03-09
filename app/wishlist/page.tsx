@@ -165,7 +165,7 @@ function WishlistPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
               {items.map((product: any) => {
                 if (!product?._id) return null;
-                const outOfStock = (product.stock || 0) === 0;
+                const outOfStock = product.stock === 0;
                 const hasDiscount = product.comparePrice && product.comparePrice > product.price;
                 const discountPct = hasDiscount
                   ? Math.round(((product.comparePrice - product.price) / product.comparePrice) * 100)

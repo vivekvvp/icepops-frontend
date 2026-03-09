@@ -406,63 +406,7 @@ function ProfilePage() {
               {/* ── Right Col ── */}
               <div className="space-y-6">
 
-                {/* Quick Stats */}
-                <div
-                  className="overflow-hidden"
-                  style={{
-                    backgroundColor: 'rgb(255, 255, 255)',
-                    border: '1px solid rgb(220, 223, 230)',
-                    borderRadius: '6px',
-                  }}
-                >
-                  <div
-                    className="px-5 py-4"
-                    style={{ borderBottom: '1px solid rgb(240, 242, 245)', backgroundColor: 'rgb(248, 249, 251)' }}
-                  >
-                    <h2 className="text-sm font-bold" style={{ color: 'rgb(15, 20, 35)' }}>Quick Stats</h2>
-                    <p className="text-xs" style={{ color: 'rgb(110, 118, 135)' }}>Your account overview</p>
-                  </div>
-                  <div className="p-4 space-y-3">
-                    {quickStats.map((stat, i) => (
-                      <Link key={i} href={stat.href}>
-                        <div
-                          className="flex items-center gap-3 p-3 transition-colors cursor-pointer"
-                          style={{
-                            borderRadius: '4px',
-                            border: '1px solid rgb(240, 242, 245)',
-                            backgroundColor: 'rgb(248, 249, 251)',
-                          }}
-                          onMouseEnter={e => {
-                            e.currentTarget.style.borderColor = 'rgb(254, 202, 202)'
-                            e.currentTarget.style.backgroundColor = 'rgb(254, 242, 242)'
-                          }}
-                          onMouseLeave={e => {
-                            e.currentTarget.style.borderColor = 'rgb(240, 242, 245)'
-                            e.currentTarget.style.backgroundColor = 'rgb(248, 249, 251)'
-                          }}
-                        >
-                          <div
-                            className="flex items-center justify-center w-8 h-8 shrink-0"
-                            style={{
-                              borderRadius: '4px',
-                              backgroundColor: 'rgb(254, 242, 242)',
-                              border: '1px solid rgb(254, 202, 202)',
-                            }}
-                          >
-                            <stat.icon className="w-4 h-4" style={{ color: 'rgb(185, 28, 28)' }} />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-xs" style={{ color: 'rgb(110, 118, 135)' }}>{stat.label}</p>
-                            <p className="text-xl font-extrabold" style={{ color: 'rgb(185, 28, 28)' }}>
-                              {stat.value}
-                            </p>
-                          </div>
-                          <ChevronRight className="w-4 h-4 shrink-0" style={{ color: 'rgb(200, 205, 215)' }} />
-                        </div>
-                      </Link>
-                    ))}
-                  </div>
-                </div>
+             
 
                 {/* Account Status */}
                 <div

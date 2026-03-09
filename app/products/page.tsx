@@ -497,7 +497,7 @@ export default function ProductsPage() {
                               onMouseEnter={e => { if (!outOfStock) e.currentTarget.style.backgroundColor = 'rgb(153, 27, 27)' }}
                               onMouseLeave={e => { if (!outOfStock) e.currentTarget.style.backgroundColor = 'rgb(185, 28, 28)' }}
                             >
-                              <ShoppingCart className="w-3.5 h-3.5 stroke-[2.5]" />
+                              
                               {outOfStock ? 'Out of Stock' : 'View Product'}
                             </button>
                           </Link>
